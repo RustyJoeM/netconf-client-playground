@@ -1,0 +1,4 @@
+- SSH channel - match request with response!
+
+- NETCONF capabilities currently raw strings (plus few standard enums)
+    - may want to add some prefix/name/version/suffix granularity?
