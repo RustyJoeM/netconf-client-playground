@@ -2,3 +2,5 @@
 
 - NETCONF capabilities currently raw strings (plus few standard enums)
     - may want to add some prefix/name/version/suffix granularity?
+
+- RPC custom attributes not taken into account in request/response - https://datatracker.ietf.org/doc/html/rfc6241#section-4.2

@@ -2,9 +2,13 @@ use anyhow::Result;
 use quick_xml::{de::from_str, se::to_string};
 
 use crate::{
-    netconf::messages::{
-        close_session::{CloseSessionRequest, CloseSessionResponse},
-        hello::{HelloRequest, HelloResponse},
+    netconf::{
+        messages::{
+            close_session::{CloseSessionRequest, CloseSessionResponse},
+            hello::{HelloRequest, HelloResponse},
+            lock::{LockRequest, LockResponse},
+        },
+        types::Datastore,
     },
     ssh_client::{SshAuthentication, SshClient},
 };
@@ -49,7 +53,7 @@ impl NetconfClient {
     pub fn close_session(&mut self) -> Result<CloseSessionResponse> {
         self.increase_message_id();
 
-        let request = CloseSessionRequest::new(self.message_id);
+        let request = CloseSessionRequest::new(self.message_id.to_string());
         let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
@@ -59,12 +63,14 @@ impl NetconfClient {
         Ok(response)
     }
 
-    // pub fn connect(&mut self) -> Result<HelloServer> {
-    //     self.ssh.connect()?;
-    //     let reply: HelloServer = quick_xml::de::from_str(&self.get_reply()?).unwrap();
-    //     if reply.is_ok() {
-    //         self.session_id = Some(reply.session_id);
-    //     }
-    //     NetconfClient::make_return(reply)
-    // }
+    pub fn lock(&mut self, datastore: Datastore) -> Result<LockResponse> {
+        self.increase_message_id();
+
+        let request = LockRequest::new(self.message_id.to_string(), datastore);
+        let request_str = to_string(&request)?;
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+
+        let response = from_str(&response_str)?;
+        Ok(response)
+    }
 }

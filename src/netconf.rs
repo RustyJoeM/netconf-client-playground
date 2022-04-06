@@ -1,3 +1,3 @@
-pub mod capability;
 pub mod common;
 pub mod messages;
+pub mod types;

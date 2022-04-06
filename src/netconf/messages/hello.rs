@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::netconf::{capability::Capability, common::XMLNS};
+use crate::netconf::{common::XMLNS, types::Capability};
 
 /// Client \<hello\> request to be sent to NETCONF server when initiating the connection.
 #[derive(Debug, Clone, Serialize)]

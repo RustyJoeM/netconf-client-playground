@@ -5,5 +5,5 @@ use serde::Serialize;
 pub struct GetRequest {
     pub xmlns: String,
     #[serde(rename = "message-id")]
-    pub message_id: u32,
+    pub message_id: String,
 }

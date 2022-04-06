@@ -30,13 +30,12 @@ impl SshClient {
     }
 
     pub fn dispatch_xml_request(&mut self, data: &str) -> Result<String> {
-        match &self.channel {
-            Some(_) => {
-                self.send_str(data)?;
-                let res = self.get_reply()?;
-                Ok(res)
-            }
-            None => bail!("request: Channel not connected!"),
+        if self.channel.is_some() {
+            self.send_str(data)?;
+            let res = self.get_reply()?;
+            Ok(res)
+        } else {
+            bail!("request: Channel not connected!");
         }
     }
 
@@ -91,6 +90,7 @@ impl SshClient {
 
         let mut session = Session::new()?;
 
+        session.set_blocking(true);
         session.set_timeout(5000); // TODO magic constant
         session.set_tcp_stream(tcp);
         session.handshake()?;
@@ -101,8 +101,11 @@ impl SshClient {
             }
         }
 
+        // let mut channel = session.channel_session()?;
+        // let mut channel = session.channel_direct_tcpip(&self.address, self.port, None)?;
         let mut channel = session.channel_session()?;
         channel.subsystem("netconf")?;
+        // channel.shell()?;
         self.channel = Some(channel);
 
         Ok(())
