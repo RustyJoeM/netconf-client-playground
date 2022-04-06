@@ -1,5 +1,4 @@
 mod netconf;
-
 mod netconf_client;
 mod ssh_client;
 
@@ -14,25 +13,11 @@ fn main() -> Result<()> {
         SshAuthentication::UserPassword("admin".to_string(), "admin".to_string()),
     );
 
-    let response = client.connect()?;
-    dbg!(&response);
+    dbg!(client.connect()?);
+    dbg!(client.hello()?);
+    // dbg!(client.lock(netconf::types::Datastore::Running)?);
 
-    dbg!("----1");
-
-    let response = client.hello()?;
-    dbg!(&response);
-
-    dbg!("----2");
-
-    let response = client.hello()?;
-    dbg!(&response);
-
-    dbg!("----3");
-
-    // std::thread::sleep(std::time::Duration::new(5, 0));
-
-    let response = client.close_session()?;
-    dbg!(&response);
+    dbg!(client.close_session()?);
 
     Ok(())
 }
