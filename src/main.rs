@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     dbg!(client.hello()?);
     // dbg!(client.lock(netconf::types::Datastore::Running)?);
     // dbg!(client.unlock(netconf::types::Datastore::Running)?);
-
+    // dbg!(client.kill_session(11)?);
     dbg!(client.close_session()?);
 
     Ok(())

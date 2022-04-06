@@ -6,6 +6,7 @@ use crate::{
         messages::{
             close_session::{CloseSessionRequest, CloseSessionResponse},
             hello::{HelloRequest, HelloResponse},
+            kill_session::{KillSessionRequest, KillSessionResponse},
             lock::{LockRequest, LockResponse},
             unlock::{UnlockRequest, UnlockResponse},
         },
@@ -79,6 +80,17 @@ impl NetconfClient {
         self.increase_message_id();
 
         let request = UnlockRequest::new(self.message_id.to_string(), datastore);
+        let request_str = to_string(&request)?;
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+
+        let response = from_str(&response_str)?;
+        Ok(response)
+    }
+
+    pub fn kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
+        self.increase_message_id();
+
+        let request = KillSessionRequest::new(self.message_id.to_string(), session_id);
         let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 

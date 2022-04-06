@@ -1,3 +1,5 @@
+- add comments to operation's implementation from NETCONF RFC in regard to what the requests do etc.?
+
 - SSH channel - match request with response!
 
 - NETCONF capabilities currently raw strings (plus few standard enums)
