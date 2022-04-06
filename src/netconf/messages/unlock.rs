@@ -7,14 +7,14 @@ use crate::netconf::{
 
 /// The \<lock\> request for short-lived restriction of datastore access.
 #[derive(Debug, Clone, Serialize)]
-#[serde(into = "LockRequestRpc")]
-pub struct LockRequest {
+#[serde(into = "UnlockRequestRpc")]
+pub struct UnlockRequest {
     #[serde(rename = "message-id")]
     message_id: String,
     target: Datastore,
 }
 
-impl LockRequest {
+impl UnlockRequest {
     pub fn new(message_id: String, target: Datastore) -> Self {
         Self { message_id, target }
     }
@@ -23,15 +23,15 @@ impl LockRequest {
 /// Private representation of \<lock\> RPC used for serialization.
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
-struct LockRequestRpc {
+struct UnlockRequestRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    lock: LockRpc,
+    unlock: UnlockRpc,
 }
 
 #[derive(Debug, Serialize)]
-struct LockRpc {
+struct UnlockRpc {
     target: TargetRpc,
 }
 
@@ -41,12 +41,12 @@ struct TargetRpc {
     datastore: Datastore,
 }
 
-impl From<LockRequest> for LockRequestRpc {
-    fn from(request: LockRequest) -> Self {
-        LockRequestRpc {
+impl From<UnlockRequest> for UnlockRequestRpc {
+    fn from(request: UnlockRequest) -> Self {
+        UnlockRequestRpc {
             xmlns: XMLNS.to_string(),
             message_id: request.message_id,
-            lock: LockRpc {
+            unlock: UnlockRpc {
                 target: TargetRpc {
                     datastore: request.target,
                 },
@@ -56,15 +56,15 @@ impl From<LockRequest> for LockRequestRpc {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(from = "LockResponseRpc")]
-pub struct LockResponse {
+#[serde(from = "UnlockResponseRpc")]
+pub struct UnlockResponse {
     message_id: String,
     xmlns: String,
     reply: RpcReply,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct LockResponseRpc {
+pub struct UnlockResponseRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
@@ -73,9 +73,9 @@ pub struct LockResponseRpc {
     pub rpc_error: Option<RpcErrorRpc>,
 }
 
-impl From<LockResponseRpc> for LockResponse {
-    fn from(rpc: LockResponseRpc) -> Self {
-        LockResponse {
+impl From<UnlockResponseRpc> for UnlockResponse {
+    fn from(rpc: UnlockResponseRpc) -> Self {
+        UnlockResponse {
             message_id: rpc.message_id,
             xmlns: rpc.xmlns,
             reply: match rpc.ok.is_some() {
