@@ -20,5 +20,12 @@ fn main() -> Result<()> {
     // dbg!(client.kill_session(11)?);
     dbg!(client.close_session()?);
 
+    // let filter = GetFilter {
+    //     data: "<pokus>adasdsd</pokus>".to_string(),
+    //     filter_type: FilterType::Subtree,
+    // };
+    // let req = GetRequest::new("123".to_string(), Some(filter));
+    // dbg!(quick_xml::se::to_string(&req));
+
     Ok(())
 }
