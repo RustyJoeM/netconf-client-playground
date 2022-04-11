@@ -1,6 +1,10 @@
-use serde::Serialize;
+use std::fmt::Debug;
 
-use crate::netconf::common::XMLNS;
+use anyhow::Result;
+use quick_xml::de::from_str;
+use serde::{Deserialize, Serialize};
+
+use crate::netconf::common::{get_tag_slice, XMLNS};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "GetRequestRpc")]
@@ -16,10 +20,7 @@ impl From<GetRequest> for GetRequestRpc {
             message_id: request.message_id,
             xmlns: request.xmlns,
             get: GetRpc {
-                filter: match request.filter {
-                    Some(f) => Some(f.into()),
-                    None => None,
-                },
+                filter: request.filter.map(|f| f.into()),
             },
         }
     }
@@ -69,15 +70,8 @@ struct GetRpc {
 struct FilterRpc {
     #[serde(rename = "type")]
     filter: FilterType,
-    #[serde(serialize_with = "unescaped", rename = "$value")]
+    // #[serde(serialize_with = "unescaped", rename = "$value")]
     data: String,
-}
-
-fn unescaped<S>(x: &str, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    s.serialize_str(x)
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -85,4 +79,35 @@ where
 pub enum FilterType {
     Subtree,
     XPath, // TODO - only if client supports capability! (RFC section 8.9)
+}
+
+#[derive(Debug)]
+pub struct GetResponse {
+    full_dump: String,
+    pub message_id: String,
+    pub xmlns: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct GetResponseRpc {
+    #[serde(rename = "message-id")]
+    pub message_id: String,
+    pub xmlns: String,
+}
+
+impl GetResponse {
+    pub fn from_str(s: String) -> Result<Self> {
+        let rpc: GetResponseRpc = from_str(&s)?;
+        let message_id = rpc.message_id;
+        let xmlns = rpc.xmlns;
+        Ok(Self {
+            full_dump: s,
+            message_id,
+            xmlns,
+        })
+    }
+
+    pub fn data_str(&self) -> Result<&str> {
+        get_tag_slice(&self.full_dump, "data")
+    }
 }

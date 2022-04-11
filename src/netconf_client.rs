@@ -5,6 +5,7 @@ use crate::{
     netconf::{
         messages::{
             close_session::{CloseSessionRequest, CloseSessionResponse},
+            get::{GetFilter, GetRequest, GetResponse},
             hello::{HelloRequest, HelloResponse},
             kill_session::{KillSessionRequest, KillSessionResponse},
             lock::{LockRequest, LockResponse},
@@ -60,7 +61,7 @@ impl NetconfClient {
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
         self.ssh.drop_channel();
-        dbg!("channel dropped");
+
         let response = from_str(&response_str)?;
         Ok(response)
     }
@@ -84,6 +85,17 @@ impl NetconfClient {
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
         let response = from_str(&response_str)?;
+        Ok(response)
+    }
+
+    pub fn get(&mut self, filter: Option<GetFilter>) -> Result<GetResponse> {
+        self.increase_message_id();
+
+        let request = GetRequest::new(self.message_id.to_string(), filter);
+        let request_str = to_string(&request)?;
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+
+        let response = GetResponse::from_str(response_str)?;
         Ok(response)
     }
 

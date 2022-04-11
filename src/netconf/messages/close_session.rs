@@ -5,25 +5,42 @@ use crate::netconf::{
     types::{RpcError, RpcReply},
 };
 
-/// Request RPC for "close-session".
+/// Request for \<close-session\> operation.
+#[derive(Debug, Clone, Serialize)]
+#[serde(into = "CloseSessionRequestRpc")]
+pub struct CloseSessionRequest {
+    message_id: String,
+    xmlns: String,
+}
+
+/// Private RPC representation of \<close-session\> request.
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
-pub struct CloseSessionRequest {
-    xmlns: String,
+struct CloseSessionRequestRpc {
     #[serde(rename = "message-id")]
     message_id: String,
+    xmlns: String,
     #[serde(rename = "close-session")]
     close_session: CloseSession,
 }
 
 #[derive(Debug, Serialize, Default)]
-pub struct CloseSession {}
+struct CloseSession {}
 
 impl CloseSessionRequest {
     pub fn new(message_id: String) -> Self {
         Self {
-            xmlns: XMLNS.to_string(),
             message_id,
+            xmlns: XMLNS.to_string(),
+        }
+    }
+}
+
+impl From<CloseSessionRequest> for CloseSessionRequestRpc {
+    fn from(request: CloseSessionRequest) -> Self {
+        CloseSessionRequestRpc {
+            xmlns: request.xmlns,
+            message_id: request.message_id,
             close_session: CloseSession {},
         }
     }
@@ -32,20 +49,20 @@ impl CloseSessionRequest {
 #[derive(Debug, Deserialize)]
 #[serde(from = "CloseSessionResponseRpc")]
 pub struct CloseSessionResponse {
-    message_id: String,
-    xmlns: String,
-    reply: RpcReply,
+    pub message_id: String,
+    pub xmlns: String,
+    pub reply: RpcReply,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename = "rpc")]
 struct CloseSessionResponseRpc {
     #[serde(rename = "message-id")]
-    pub message_id: String,
-    pub xmlns: String,
-    pub ok: Option<()>,
+    message_id: String,
+    xmlns: String,
+    ok: Option<()>,
     #[serde(rename = "rpc-error")]
-    pub rpc_error: Option<RpcError>,
+    rpc_error: Option<RpcError>,
 }
 
 impl From<CloseSessionResponseRpc> for CloseSessionResponse {

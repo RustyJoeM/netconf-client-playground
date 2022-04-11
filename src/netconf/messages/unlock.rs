@@ -58,19 +58,19 @@ impl From<UnlockRequest> for UnlockRequestRpc {
 #[derive(Debug, Deserialize)]
 #[serde(from = "UnlockResponseRpc")]
 pub struct UnlockResponse {
-    message_id: String,
-    xmlns: String,
-    reply: RpcReply,
+    pub message_id: String,
+    pub xmlns: String,
+    pub reply: RpcReply,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct UnlockResponseRpc {
+struct UnlockResponseRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    pub ok: Option<()>,
+    ok: Option<()>,
     #[serde(rename = "rpc-error")]
-    pub rpc_error: Option<RpcErrorRpc>,
+    rpc_error: Option<RpcErrorRpc>,
 }
 
 impl From<UnlockResponseRpc> for UnlockResponse {

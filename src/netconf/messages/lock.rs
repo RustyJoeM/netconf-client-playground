@@ -9,7 +9,6 @@ use crate::netconf::{
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "LockRequestRpc")]
 pub struct LockRequest {
-    #[serde(rename = "message-id")]
     message_id: String,
     target: Datastore,
 }
@@ -55,22 +54,23 @@ impl From<LockRequest> for LockRequestRpc {
     }
 }
 
+/// Response for the \<lock\> operation.
 #[derive(Debug, Deserialize)]
 #[serde(from = "LockResponseRpc")]
 pub struct LockResponse {
-    message_id: String,
-    xmlns: String,
-    reply: RpcReply,
+    pub message_id: String,
+    pub xmlns: String,
+    pub reply: RpcReply,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct LockResponseRpc {
+struct LockResponseRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    pub ok: Option<()>,
+    ok: Option<()>,
     #[serde(rename = "rpc-error")]
-    pub rpc_error: Option<RpcErrorRpc>,
+    rpc_error: Option<RpcErrorRpc>,
 }
 
 impl From<LockResponseRpc> for LockResponse {

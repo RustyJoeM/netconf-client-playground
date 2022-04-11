@@ -6,17 +6,18 @@ use crate::netconf::{common::XMLNS, types::Capability};
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "HelloRequestRpc")]
 pub struct HelloRequest {
-    pub capabilities: Vec<Capability>,
+    /// List of capabilities supported by client initiating the NETCONF connection.
+    capabilities: Vec<Capability>,
 }
 
 impl HelloRequest {
-    /// Create instance of RPC for \<hello\> request.
-    /// Pass vector of supported client capabilities,
-    /// or empty vector for default Base capability only.
+    /// Create instance of \<hello\> request.
+    /// Pass vector of supported client capabilities as an input,
+    /// or empty vector for default "base-1.0" capability only.
     pub fn new(capabilities: Vec<Capability>) -> Self {
         Self {
             capabilities: match capabilities.is_empty() {
-                true => vec![Capability::Base10],
+                true => vec![Capability::Base],
                 false => capabilities,
             },
         }
@@ -40,16 +41,19 @@ struct CapabilitiesRpc {
 #[derive(Debug, Serialize, Deserialize)]
 struct CapabilityRpc {
     #[serde(rename = "$value")]
-    item: Capability,
+    item: String,
 }
 
 impl From<HelloRequest> for HelloRequestRpc {
+    /// Automatically convert `HelloRequest` info/from its RPC representation struct used in serialization.
     fn from(request: HelloRequest) -> Self {
         let capabilities = CapabilitiesRpc {
             items: request
                 .capabilities
                 .iter()
-                .map(|cap| CapabilityRpc { item: cap.clone() })
+                .map(|cap| CapabilityRpc {
+                    item: cap.get_urn().to_string(),
+                })
                 .collect(),
         };
         HelloRequestRpc {
@@ -59,7 +63,7 @@ impl From<HelloRequest> for HelloRequestRpc {
     }
 }
 
-/// Initial \<hello\> response sent by NETCONF server when initiation the session.
+/// Initial \<hello\> response sent by NETCONF server.
 #[derive(Debug, Deserialize)]
 #[serde(from = "HelloResponseRpc")]
 pub struct HelloResponse {
@@ -79,6 +83,7 @@ struct HelloResponseRpc {
 }
 
 impl From<HelloResponseRpc> for HelloResponse {
+    /// Automatically convert `HelloResponse` info/from its RPC representation struct used in serialization.
     fn from(rpc: HelloResponseRpc) -> Self {
         HelloResponse {
             session_id: rpc.session_id,
@@ -86,7 +91,7 @@ impl From<HelloResponseRpc> for HelloResponse {
                 .capabilities
                 .items
                 .iter()
-                .map(|cap| cap.item.clone())
+                .map(|cap| Capability::from_urn(&cap.item))
                 .collect(),
         }
     }

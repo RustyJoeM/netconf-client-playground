@@ -80,6 +80,9 @@ impl SshClient {
             //     .into());
             // }
         }
+        if let Some(stripped) = result.strip_suffix(MESSAGE_SEPARATOR) {
+            result = stripped.to_string();
+        }
         Ok(result)
     }
 

@@ -26,7 +26,7 @@ impl KillSessionRequest {
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
 #[serde(rename_all = "kebab-case")]
-pub struct KillSessionRequestRpc {
+struct KillSessionRequestRpc {
     message_id: String,
     xmlns: String,
     kill_session: KillSessionRpc,
@@ -61,19 +61,19 @@ impl From<KillSessionRequest> for KillSessionRequestRpc {
 #[derive(Debug, Deserialize)]
 #[serde(from = "KillSessionResponseRpc")]
 pub struct KillSessionResponse {
-    message_id: String,
-    xmlns: String,
-    reply: RpcReply,
+    pub message_id: String,
+    pub xmlns: String,
+    pub reply: RpcReply,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct KillSessionResponseRpc {
+struct KillSessionResponseRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    pub ok: Option<()>,
+    ok: Option<()>,
     #[serde(rename = "rpc-error")]
-    pub rpc_error: Option<RpcErrorRpc>,
+    rpc_error: Option<RpcErrorRpc>,
 }
 
 impl From<KillSessionResponseRpc> for KillSessionResponse {
