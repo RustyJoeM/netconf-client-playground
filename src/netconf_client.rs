@@ -31,8 +31,9 @@ impl NetconfClient {
         }
     }
 
-    fn increase_message_id(&mut self) {
+    fn new_message_id(&mut self) -> String {
         self.message_id = self.message_id.saturating_add(1);
+        self.message_id.to_string()
     }
 
     pub fn connect(&mut self) -> Result<()> {
@@ -41,8 +42,6 @@ impl NetconfClient {
     }
 
     pub fn hello(&mut self) -> Result<HelloResponse> {
-        self.increase_message_id();
-
         let request = HelloRequest::new(vec![]);
         let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
@@ -54,9 +53,7 @@ impl NetconfClient {
     }
 
     pub fn close_session(&mut self) -> Result<CloseSessionResponse> {
-        self.increase_message_id();
-
-        let request = CloseSessionRequest::new(self.message_id.to_string());
+        let request = CloseSessionRequest::new(self.new_message_id());
         let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
@@ -67,9 +64,7 @@ impl NetconfClient {
     }
 
     pub fn lock(&mut self, datastore: Datastore) -> Result<LockResponse> {
-        self.increase_message_id();
-
-        let request = LockRequest::new(self.message_id.to_string(), datastore);
+        let request = LockRequest::new(self.new_message_id(), datastore);
         let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
@@ -78,34 +73,27 @@ impl NetconfClient {
     }
 
     pub fn unlock(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
-        self.increase_message_id();
-
-        let request = UnlockRequest::new(self.message_id.to_string(), datastore);
+        let request = UnlockRequest::new(self.new_message_id(), datastore);
         let request_str = to_string(&request)?;
-        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response = from_str(&response_str)?;
         Ok(response)
     }
 
     pub fn get(&mut self, filter: Option<GetFilter>) -> Result<GetResponse> {
-        self.increase_message_id();
+        let request_str = GetRequest::new_request_str(self.new_message_id(), filter)?;
 
-        let request = GetRequest::new(self.message_id.to_string(), filter);
-        let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
-
         let response = GetResponse::from_str(response_str)?;
         Ok(response)
     }
 
     pub fn kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
-        self.increase_message_id();
-
-        let request = KillSessionRequest::new(self.message_id.to_string(), session_id);
+        let request = KillSessionRequest::new(self.new_message_id(), session_id);
         let request_str = to_string(&request)?;
-        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
 
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response = from_str(&response_str)?;
         Ok(response)
     }
