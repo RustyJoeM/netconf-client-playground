@@ -8,9 +8,9 @@ use crate::netconf::{
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "KillSessionRequestRpc")]
 pub struct KillSessionRequest {
-    message_id: String,
-    xmlns: String,
-    session_id: u32,
+    pub message_id: String,
+    pub xmlns: String,
+    pub session_id: u32,
 }
 
 impl KillSessionRequest {
@@ -81,9 +81,9 @@ impl From<KillSessionResponseRpc> for KillSessionResponse {
         KillSessionResponse {
             message_id: rpc.message_id,
             xmlns: rpc.xmlns,
-            reply: match rpc.ok.is_some() {
-                true => RpcReply::Ok,
-                false => RpcReply::Error(rpc.rpc_error.unwrap().into()),
+            reply: match rpc.rpc_error {
+                None => RpcReply::Ok,
+                Some(err) => RpcReply::Error(err.into()),
             },
         }
     }

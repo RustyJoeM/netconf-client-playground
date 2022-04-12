@@ -5,13 +5,14 @@ use crate::{
     netconf::{
         messages::{
             close_session::{CloseSessionRequest, CloseSessionResponse},
-            get::{GetFilter, GetRequest, GetResponse},
+            get::{GetRequest, GetResponse},
+            get_config::{GetConfigRequest, GetConfigResponse},
             hello::{HelloRequest, HelloResponse},
             kill_session::{KillSessionRequest, KillSessionResponse},
             lock::{LockRequest, LockResponse},
             unlock::{UnlockRequest, UnlockResponse},
         },
-        types::Datastore,
+        types::{Datastore, Filter},
     },
     ssh_client::{SshAuthentication, SshClient},
 };
@@ -81,11 +82,23 @@ impl NetconfClient {
         Ok(response)
     }
 
-    pub fn get(&mut self, filter: Option<GetFilter>) -> Result<GetResponse> {
+    pub fn get(&mut self, filter: Option<Filter>) -> Result<GetResponse> {
         let request_str = GetRequest::new_request_str(self.new_message_id(), filter)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response = GetResponse::from_str(response_str)?;
+        Ok(response)
+    }
+
+    pub fn get_config(
+        &mut self,
+        source: Datastore,
+        filter: Option<Filter>,
+    ) -> Result<GetConfigResponse> {
+        let request_str = GetConfigRequest::new_request_str(self.new_message_id(), source, filter)?;
+
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response = GetConfigResponse::from_str(response_str)?;
         Ok(response)
     }
 

@@ -1,3 +1,5 @@
+- add NMDA operations rfc 8526 - <get-data>, <edit-data>...
+
 - add comments to operation's implementation from NETCONF RFC in regard to what the requests do etc.?
 
 - SSH channel - match request with response!

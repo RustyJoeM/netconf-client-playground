@@ -18,11 +18,17 @@ fn main() -> Result<()> {
     // dbg!(client.lock(netconf::types::Datastore::Running)?);
     // dbg!(client.unlock(netconf::types::Datastore::Running)?);
     // dbg!(client.get(None)?);
-    // let filter = GetFilter {
+
+    // use crate::netconf::types::{Filter, FilterType};
+    // let filter = Filter {
     //     filter_type: FilterType::Subtree,
-    //     data: "<todo/>".to_string(),
+    //     data: "<dhcp xmlns=\"http://tail-f.com/ns/example/dhcpd\"/>".to_string(),
     // };
-    // dbg!(client.get(Some(filter))?);
+    // // let res = client.get(Some(filter))?;
+    // use crate::netconf::types::Datastore;
+    // let res = client.get_config(Datastore::Running, Some(filter))?;
+    // dbg!(res.data()?);
+
     // dbg!(client.kill_session(11)?);
     dbg!(client.close_session()?);
 
