@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::netconf::{
     common::XMLNS,
-    types::{RpcErrorRpc, RpcReply},
+    types::{tag_wrapper::TagWrapper, RpcErrorRpc, RpcReply},
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -35,13 +35,7 @@ struct KillSessionRequestRpc {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
 struct KillSessionRpc {
-    session_id: SessionIdRpc,
-}
-
-#[derive(Debug, Serialize)]
-struct SessionIdRpc {
-    #[serde(rename = "$value")]
-    session_id: u32,
+    session_id: TagWrapper<u32>,
 }
 
 impl From<KillSessionRequest> for KillSessionRequestRpc {
@@ -50,9 +44,7 @@ impl From<KillSessionRequest> for KillSessionRequestRpc {
             message_id: request.message_id,
             xmlns: request.xmlns,
             kill_session: KillSessionRpc {
-                session_id: SessionIdRpc {
-                    session_id: request.session_id,
-                },
+                session_id: request.session_id.into(),
             },
         }
     }

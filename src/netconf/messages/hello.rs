@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::netconf::{common::XMLNS, types::Capability};
+use crate::netconf::{
+    common::XMLNS,
+    types::{tag_wrapper::TagWrapper, Capability},
+};
 
 /// Client \<hello\> request to be sent to NETCONF server when initiating the connection.
 #[derive(Debug, Clone, Serialize)]
@@ -35,13 +38,7 @@ struct HelloRequestRpc {
 #[derive(Debug, Serialize, Deserialize)]
 struct CapabilitiesRpc {
     #[serde(rename = "capability")]
-    items: Vec<CapabilityRpc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct CapabilityRpc {
-    #[serde(rename = "$value")]
-    item: String,
+    items: Vec<TagWrapper<String>>,
 }
 
 impl From<HelloRequest> for HelloRequestRpc {
@@ -51,9 +48,7 @@ impl From<HelloRequest> for HelloRequestRpc {
             items: request
                 .capabilities
                 .iter()
-                .map(|cap| CapabilityRpc {
-                    item: cap.get_urn().to_string(),
-                })
+                .map(|cap| cap.get_urn().to_string().into())
                 .collect(),
         };
         HelloRequestRpc {

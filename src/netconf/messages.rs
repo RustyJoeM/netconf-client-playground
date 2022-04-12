@@ -1,4 +1,5 @@
 pub mod close_session;
+pub mod edit_config;
 pub mod get;
 pub mod get_config;
 pub mod hello;

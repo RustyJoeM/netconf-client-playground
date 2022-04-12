@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::netconf::{
     common::XMLNS,
-    types::{Datastore, RpcErrorRpc, RpcReply},
+    types::{tag_wrapper::TagWrapper, Datastore, RpcErrorRpc, RpcReply},
 };
 
 /// The \<lock\> request for short-lived restriction of datastore access.
@@ -31,13 +31,7 @@ struct LockRequestRpc {
 
 #[derive(Debug, Serialize)]
 struct LockRpc {
-    target: TargetRpc,
-}
-
-#[derive(Debug, Serialize)]
-struct TargetRpc {
-    #[serde(rename = "$value")]
-    datastore: Datastore,
+    target: TagWrapper<Datastore>,
 }
 
 impl From<LockRequest> for LockRequestRpc {
@@ -46,9 +40,7 @@ impl From<LockRequest> for LockRequestRpc {
             xmlns: XMLNS.to_string(),
             message_id: request.message_id,
             lock: LockRpc {
-                target: TargetRpc {
-                    datastore: request.target,
-                },
+                target: request.target.into(),
             },
         }
     }

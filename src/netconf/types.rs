@@ -9,3 +9,5 @@ pub use datastore::Datastore;
 pub use filter::*;
 pub use rpc_error::*;
 pub use rpc_reply::RpcReply;
+
+pub mod tag_wrapper;
