@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use serde::Deserialize;
 
-use crate::netconf::types::{RpcError, RpcReply};
+use crate::netconf_client::types::{RpcError, RpcReply};
 
 /// Simple response type used by several NETCONF operations,
 /// when NETCONF server returns either:
@@ -36,7 +36,7 @@ impl TryFrom<SimpleResponseRpc> for SimpleResponse {
         let reply = match value.ok.is_some() {
             true => RpcReply::Ok,
             false => match value.rpc_error {
-                Some(err) => RpcReply::Error(err.into()),
+                Some(err) => RpcReply::Error(err),
                 None => bail!("Missing both <ok/> and <rpc-error> from response"),
             },
         };

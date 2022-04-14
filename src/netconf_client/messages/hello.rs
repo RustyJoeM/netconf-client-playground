@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::netconf::{
+use crate::netconf_client::{
     common::XMLNS,
     types::{tag_wrapper::TagWrapper, Capability},
 };
@@ -15,15 +15,9 @@ pub struct HelloRequest {
 
 impl HelloRequest {
     /// Create instance of \<hello\> request.
-    /// Pass vector of supported client capabilities as an input,
-    /// or empty vector for default "base-1.0" capability only.
+    /// Pass vector of supported client capabilities as an input.
     pub fn new(capabilities: Vec<Capability>) -> Self {
-        Self {
-            capabilities: match capabilities.is_empty() {
-                true => vec![Capability::Base],
-                false => capabilities,
-            },
-        }
+        Self { capabilities }
     }
 }
 

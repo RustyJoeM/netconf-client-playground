@@ -1,61 +1,82 @@
+mod common;
+mod messages;
+pub mod types;
+
+use std::net::IpAddr;
+
+// TODO - split to pub responses, or possibly pub requests as well?
+use messages::{
+    CloseSessionRequest, CloseSessionResponse, CopyConfigRequest, CopyConfigResponse,
+    DeleteConfigRequest, DeleteConfigResponse, GetConfigRequest, GetConfigResponse, GetRequest,
+    GetResponse, HelloRequest, HelloResponse, KillSessionRequest, KillSessionResponse, LockRequest,
+    LockResponse, UnlockRequest, UnlockResponse,
+};
+
+mod ssh_client;
+pub use ssh_client::SshAuthentication;
+use ssh_client::SshClient;
+
 use anyhow::Result;
 use quick_xml::{de::from_str, se::to_string};
 
-use crate::{
-    netconf::{
-        messages::{
-            close_session::{CloseSessionRequest, CloseSessionResponse},
-            copy_config::{CopyConfigRequest, CopyConfigResponse},
-            get::{GetRequest, GetResponse},
-            get_config::{GetConfigRequest, GetConfigResponse},
-            hello::{HelloRequest, HelloResponse},
-            kill_session::{KillSessionRequest, KillSessionResponse},
-            lock::{LockRequest, LockResponse},
-            unlock::{UnlockRequest, UnlockResponse},
-        },
-        types::{Datastore, Filter, RpcReply},
-    },
-    ssh_client::{SshAuthentication, SshClient},
-};
+use crate::netconf_client::types::{Capability, Datastore, Filter, RpcReply};
 
+/// The core NETCONF client. Simple blocking implementation that allows streaming
+/// NETCONF RPC messages to a target server.
 pub struct NetconfClient {
     ssh: SshClient,
-    message_id: u32,
-    pub session_id: Option<u32>,
+    last_message_id: u32,
+    session_id: Option<u32>,
+    client_capabilities: Vec<Capability>,
+    server_capabilities: Option<Vec<Capability>>,
 }
 
 impl NetconfClient {
-    pub fn new(address: &str, port: u16, auth: SshAuthentication) -> Self {
+    /// Create new instance of NETCONF client, without connecting to the server.
+    /// Invoke [`Self::connect()`] to establish the connection, prior to other requests.
+    pub fn new(
+        address: IpAddr,
+        port: u16,
+        auth: SshAuthentication,
+        client_capabilities: Vec<Capability>,
+    ) -> Self {
         Self {
             ssh: SshClient::new(address, port, auth),
-            message_id: 0,
+            last_message_id: 0,
             session_id: None,
+            client_capabilities,
+            server_capabilities: None,
         }
     }
 
-    fn new_message_id(&mut self) -> String {
-        self.message_id = self.message_id.saturating_add(1);
-        self.message_id.to_string()
-    }
-
+    /// Establish connection to target server.
     pub fn connect(&mut self) -> Result<()> {
-        self.ssh.connect()?;
-        Ok(())
+        self.ssh.connect()
     }
 
-    pub fn hello(&mut self) -> Result<HelloResponse> {
-        let request = HelloRequest::new(vec![]);
+    /// Increase internal message-id counter and return its String representation.
+    fn new_message_id(&mut self) -> String {
+        self.last_message_id = self.last_message_id.saturating_add(1);
+        self.last_message_id.to_string()
+    }
+
+    /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.
+    /// These cannot be changed during session runtime.
+    /// Server capabilities are stored in the [`Self`] instance after successful invocation.
+    pub fn request_hello(&mut self) -> Result<HelloResponse> {
+        let request = HelloRequest::new(self.client_capabilities.clone());
         let request_str = to_string(&request)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response: HelloResponse = from_str(&response_str)?;
 
         self.session_id = Some(response.session_id);
+        self.server_capabilities = Some(response.capabilities.clone());
 
         Ok(response)
     }
 
-    pub fn close_session(&mut self) -> Result<CloseSessionResponse> {
+    pub fn request_close_session(&mut self) -> Result<CloseSessionResponse> {
         let request = CloseSessionRequest::new(self.new_message_id());
         let request_str = to_string(&request)?;
 
@@ -63,13 +84,13 @@ impl NetconfClient {
         let response: CloseSessionResponse = from_str(&response_str)?;
 
         if RpcReply::Ok == response.reply {
-            self.ssh.drop_channel();
+            self.ssh.disconnect()?;
         }
 
         Ok(response)
     }
 
-    pub fn lock(&mut self, datastore: Datastore) -> Result<LockResponse> {
+    pub fn request_lock(&mut self, datastore: Datastore) -> Result<LockResponse> {
         let request = LockRequest::new(self.new_message_id(), datastore);
         let request_str = to_string(&request)?;
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
@@ -78,7 +99,7 @@ impl NetconfClient {
         Ok(response)
     }
 
-    pub fn unlock(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
+    pub fn request_unlock(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
         let request = UnlockRequest::new(self.new_message_id(), datastore);
         let request_str = to_string(&request)?;
 
@@ -87,7 +108,7 @@ impl NetconfClient {
         Ok(response)
     }
 
-    pub fn get(&mut self, filter: Option<Filter>) -> Result<GetResponse> {
+    pub fn request_get(&mut self, filter: Option<Filter>) -> Result<GetResponse> {
         let request_str = GetRequest::new_request_str(self.new_message_id(), filter)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
@@ -95,7 +116,7 @@ impl NetconfClient {
         Ok(response)
     }
 
-    pub fn get_config(
+    pub fn request_get_config(
         &mut self,
         source: Datastore,
         filter: Option<Filter>,
@@ -107,7 +128,7 @@ impl NetconfClient {
         Ok(response)
     }
 
-    pub fn edit_config(
+    pub fn request_edit_config(
         &mut self,
         target: Datastore,
         source: Datastore,
@@ -120,7 +141,25 @@ impl NetconfClient {
         Ok(response)
     }
 
-    pub fn kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
+    pub fn request_copy_config(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
+        let request = UnlockRequest::new(self.new_message_id(), datastore);
+        let request_str = to_string(&request)?;
+
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response = from_str(&response_str)?;
+        Ok(response)
+    }
+
+    pub fn request_delete_config(&mut self, target: Datastore) -> Result<DeleteConfigResponse> {
+        let request = DeleteConfigRequest::new(self.new_message_id(), target);
+        let request_str = to_string(&request)?;
+
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response = from_str(&response_str)?;
+        Ok(response)
+    }
+
+    pub fn request_kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
         let request = KillSessionRequest::new(self.new_message_id(), session_id);
         let request_str = to_string(&request)?;
 

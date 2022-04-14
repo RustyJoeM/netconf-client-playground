@@ -1,22 +1,27 @@
-mod netconf;
-mod netconf_client;
-mod ssh_client;
+// #![deny(missing_docs)]
+// #![warn(missing_docs)]
+// #![deny(missing_doc_code_examples)]
 
 use anyhow::Result;
 
-use crate::{netconf_client::NetconfClient, ssh_client::SshAuthentication};
+mod netconf_client;
+use crate::netconf_client::{
+    types::{Capability, Datastore},
+    NetconfClient, SshAuthentication,
+};
 
 fn main() -> Result<()> {
     let mut client = NetconfClient::new(
-        "127.0.0.1",
+        "127.0.0.1".parse()?,
         2022,
         SshAuthentication::UserPassword("admin".to_string(), "admin".to_string()),
+        vec![Capability::Base],
     );
 
     dbg!(client.connect()?);
-    dbg!(client.hello()?);
-    // dbg!(client.lock(netconf::types::Datastore::Running)?);
-    // dbg!(client.unlock(netconf::types::Datastore::Running)?);
+    dbg!(client.request_hello()?);
+    dbg!(client.request_lock(Datastore::Running)?);
+    dbg!(client.request_unlock(Datastore::Running)?);
     // dbg!(client.get(None)?);
 
     // use crate::netconf::types::{Filter, FilterType};
@@ -30,7 +35,21 @@ fn main() -> Result<()> {
     // dbg!(res.data()?);
 
     // dbg!(client.kill_session(11)?);
-    dbg!(client.close_session()?);
+    dbg!(client.request_close_session()?);
+
+    // use netconf::{
+    //     messages::edit_config::{EditConfigParams, EditConfigRequest},
+    //     types::Datastore,
+    // };
+    // let params = EditConfigParams {
+    //     target: Datastore::Running,
+    //     default_operation: None,
+    //     test_option: None,
+    //     error_option: None,
+    //     config: "<right/>".to_string(),
+    // };
+    // let req = EditConfigRequest::new_request_str("123".to_string(), params)?;
+    // dbg!(req);
 
     // let req = GetRequest::new("123".to_string(), Some(filter));
     // dbg!(quick_xml::se::to_string(&req));

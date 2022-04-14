@@ -1,48 +1,95 @@
+//! Simple blocking implementation of SSH client, that allows exchanging RPC
+//! requests/responses with target NETCONF server.
+
 use anyhow::{bail, Result};
 use ssh2::{Channel, Session};
+
 use std::{
     io::{self, Read, Write},
     net::{IpAddr, SocketAddr, TcpStream},
-    str::FromStr,
 };
 
-use crate::netconf::common::MESSAGE_SEPARATOR;
+/// RFC specified NETCONF message separator.
+const MESSAGE_SEPARATOR: &str = "]]>]]>";
+const SSH_TIMEOUT: u32 = 5000;
 
+/// Type of authentication used for SSH connection.
 pub enum SshAuthentication {
+    /// Plain old username & password access. Please note plain-text data kept in memory during runtime.
     UserPassword(String, String),
 }
 
+/// SSH client for streaming messages between caller - client, and NETCONF server.
 pub struct SshClient {
-    address: String,
+    address: IpAddr,
     port: u16,
     auth: SshAuthentication,
     channel: Option<Channel>,
 }
 
 impl SshClient {
-    pub fn new(address: &str, port: u16, auth: SshAuthentication) -> Self {
+    /// Creates new instance of SSH client, without initiating any network connection yet.
+    /// Prior to any other sub-sequent operations, [`Self::connect()`] must be invoked.
+    pub fn new(address: IpAddr, port: u16, auth: SshAuthentication) -> Self {
         Self {
-            address: address.to_string(),
+            address,
             port,
             auth,
             channel: None,
         }
     }
 
+    /// Connect to target NETCONF server - open the SSH session via TCP stream and authenticate.
+    /// Must be invoked after creation of [`Self`] prior to dispatching any messages.
+    pub fn connect(&mut self) -> Result<()> {
+        let mut session = Session::new()?;
+        session.set_blocking(true);
+        session.set_timeout(SSH_TIMEOUT);
+        let socket_address = SocketAddr::from((self.address, self.port));
+        let tcp_stream = TcpStream::connect(socket_address)?;
+        session.set_tcp_stream(tcp_stream);
+        session.handshake()?;
+
+        match &self.auth {
+            SshAuthentication::UserPassword(username, password) => {
+                session.userauth_password(username, password)?;
+            }
+        }
+
+        let mut channel = session.channel_session()?;
+        channel.subsystem("netconf")?;
+        self.channel = Some(channel);
+
+        Ok(())
+    }
+
+    /// Disconnects the instance of [`Self`] from connected NETCONF server.
+    /// Instance can be re-used subsequently if needed, with another connect() invocation.
+    pub fn disconnect(&mut self) -> Result<()> {
+        let channel = self.channel.as_mut().unwrap();
+        channel.send_eof()?;
+        channel.wait_eof()?;
+        match channel.eof() {
+            true => {}
+            false => return Err(ssh2::Error::eof().into()),
+        };
+        channel.close()?;
+        channel.wait_close()?;
+        self.channel = None;
+        Ok(())
+    }
+
+    /// Dispatches the input data over connected SSH stream.
+    /// Returns the String containing whole reponse received from server up to & excluding the NETCONF message separator.
     pub fn dispatch_xml_request(&mut self, data: &str) -> Result<String> {
         if self.channel.is_some() {
-            self.send_str(data)?;
+            let cmd = data.to_string() + MESSAGE_SEPARATOR;
+            self.write_all(cmd.as_bytes())?;
             let res = self.get_reply()?;
             Ok(res)
         } else {
             bail!("request: Channel not connected!");
         }
-    }
-
-    fn send_str(&mut self, data: &str) -> Result<()> {
-        let cmd = data.to_string() + MESSAGE_SEPARATOR;
-        self.write_all(cmd.as_bytes())?;
-        Ok(())
     }
 
     fn get_reply(&mut self) -> Result<String> {
@@ -84,52 +131,6 @@ impl SshClient {
             result = stripped.to_string();
         }
         Ok(result)
-    }
-
-    pub fn connect(&mut self) -> Result<()> {
-        let ip_addr = IpAddr::from_str(&self.address)?;
-        let socket_address = SocketAddr::from((ip_addr, self.port));
-        let tcp = TcpStream::connect(socket_address)?;
-
-        let mut session = Session::new()?;
-
-        session.set_blocking(true);
-        session.set_timeout(5000); // TODO magic constant
-        session.set_tcp_stream(tcp);
-        session.handshake()?;
-
-        match &self.auth {
-            SshAuthentication::UserPassword(username, password) => {
-                session.userauth_password(username, password)?;
-            }
-        }
-
-        // let mut channel = session.channel_session()?;
-        // let mut channel = session.channel_direct_tcpip(&self.address, self.port, None)?;
-        let mut channel = session.channel_session()?;
-        channel.subsystem("netconf")?;
-        // channel.shell()?;
-        self.channel = Some(channel);
-
-        Ok(())
-    }
-
-    pub fn drop_channel(&mut self) {
-        self.channel = None;
-    }
-
-    pub fn disconnect(&mut self) -> Result<()> {
-        let channel = self.channel.as_mut().unwrap();
-        channel.send_eof()?;
-        channel.wait_eof()?;
-        match channel.eof() {
-            true => {}
-            false => return Err(ssh2::Error::eof().into()),
-        };
-        channel.close()?;
-        channel.wait_close()?;
-        self.drop_channel();
-        Ok(())
     }
 }
 

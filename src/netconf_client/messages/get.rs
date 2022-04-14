@@ -4,50 +4,41 @@ use anyhow::{bail, Result};
 use quick_xml::{de::from_str, se::to_string};
 use serde::{Deserialize, Serialize};
 
-use crate::netconf::{
+use crate::netconf_client::{
     common::{get_tag_slice, XMLNS},
-    types::{Datastore, Filter, FilterRpc, RpcErrorRpc, RpcReply},
+    types::{Filter, FilterRpc, RpcErrorRpc, RpcReply},
 };
 
 #[derive(Debug, Serialize, Clone)]
-#[serde(into = "GetConfigRequestRpc")]
-pub struct GetConfigRequest {
+#[serde(into = "GetRequestRpc")]
+pub struct GetRequest {
     pub message_id: String,
     pub xmlns: String,
-    pub source: Datastore,
     pub filter: Option<Filter>,
 }
 
-impl From<GetConfigRequest> for GetConfigRequestRpc {
-    fn from(request: GetConfigRequest) -> Self {
-        GetConfigRequestRpc {
+impl From<GetRequest> for GetRequestRpc {
+    fn from(request: GetRequest) -> Self {
+        GetRequestRpc {
             message_id: request.message_id,
             xmlns: request.xmlns,
-            get_config: GetConfigRpc {
-                source: SourceRpc {
-                    item: request.source,
-                },
+            get: GetRpc {
                 filter: request.filter.map(|f| f.into()),
             },
         }
     }
 }
 
-impl GetConfigRequest {
-    fn new(message_id: String, source: Datastore, filter: Option<Filter>) -> Self {
+impl GetRequest {
+    fn new(message_id: String, filter: Option<Filter>) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
-            source,
             filter,
         }
     }
 
-    pub fn new_request_str(
-        message_id: String,
-        source: Datastore,
-        filter: Option<Filter>,
-    ) -> Result<String> {
+    pub fn new_request_str(message_id: String, filter: Option<Filter>) -> Result<String> {
         const TOKEN: &str = "MAGIC_TOKEN";
         let mut filter = filter;
 
@@ -63,7 +54,7 @@ impl GetConfigRequest {
         };
 
         // serialize RPC without filter data (if some)
-        let instance = Self::new(message_id, source, filter);
+        let instance = Self::new(message_id, filter);
         let mut instance_str = to_string(&instance)?;
 
         // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)
@@ -76,29 +67,21 @@ impl GetConfigRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
-struct GetConfigRequestRpc {
+struct GetRequestRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    #[serde(rename = "get-config")]
-    get_config: GetConfigRpc,
+    get: GetRpc,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename = "get-config")]
-struct GetConfigRpc {
-    source: SourceRpc,
+#[serde(rename = "get")]
+struct GetRpc {
     filter: Option<FilterRpc>,
 }
 
-#[derive(Debug, Serialize)]
-struct SourceRpc {
-    #[serde(rename = "$value")]
-    item: Datastore,
-}
-
 #[derive(Debug)]
-pub struct GetConfigResponse {
+pub struct GetResponse {
     full_dump: String,
     pub message_id: String,
     pub xmlns: String,
@@ -106,7 +89,7 @@ pub struct GetConfigResponse {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-struct GetConfigResponseRpc {
+struct GetResponseRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
@@ -114,9 +97,9 @@ struct GetConfigResponseRpc {
     rpc_error: Option<RpcErrorRpc>,
 }
 
-impl GetConfigResponse {
+impl GetResponse {
     pub fn from_str(s: String) -> Result<Self> {
-        let rpc: GetConfigResponseRpc = from_str(&s)?;
+        let rpc: GetResponseRpc = from_str(&s)?;
         let message_id = rpc.message_id;
         let xmlns = rpc.xmlns;
         let reply = match rpc.rpc_error {

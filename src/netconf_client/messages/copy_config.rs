@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
-use crate::netconf::{
+use crate::netconf_client::{
     common::XMLNS,
     types::{tag_wrapper::TagWrapper, Datastore, RpcErrorRpc, RpcReply},
 };

@@ -20,7 +20,7 @@ impl From<Filter> for FilterRpc {
 
 #[derive(Debug, Serialize)]
 #[serde(rename = "filter")]
-pub(in crate::netconf) struct FilterRpc {
+pub(in crate::netconf_client) struct FilterRpc {
     #[serde(rename = "type")]
     filter: String,
     #[serde(rename = "$value")]

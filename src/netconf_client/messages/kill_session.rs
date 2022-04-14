@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::netconf::{
+use crate::netconf_client::{
     common::XMLNS,
     types::{tag_wrapper::TagWrapper, SimpleResponse},
 };

@@ -4,6 +4,7 @@ mod filter;
 mod rpc_error;
 mod rpc_reply;
 mod simple_response;
+mod url;
 
 pub use capability::Capability;
 pub use datastore::Datastore;

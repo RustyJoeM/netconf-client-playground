@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::netconf::{common::XMLNS, types::SimpleResponse};
+use crate::netconf_client::{common::XMLNS, types::SimpleResponse};
 
 /// Request for \<close-session\> operation.
 #[derive(Debug, Clone, Serialize)]
