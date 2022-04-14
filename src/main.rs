@@ -7,11 +7,11 @@ use anyhow::Result;
 mod netconf_client;
 use crate::netconf_client::{
     types::{Capability, Datastore},
-    NetconfClient, SshAuthentication,
+    NetconfSession, SshAuthentication,
 };
 
 fn main() -> Result<()> {
-    let mut client = NetconfClient::new(
+    let mut client = NetconfSession::new(
         "127.0.0.1".parse()?,
         2022,
         SshAuthentication::UserPassword("admin".to_string(), "admin".to_string()),

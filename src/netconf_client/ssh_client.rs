@@ -92,6 +92,7 @@ impl SshClient {
         }
     }
 
+    /// Blocking receive of the stream data. Buffers all the incoming data up until NETCONF message terminator.
     fn get_reply(&mut self) -> Result<String> {
         if self.channel.is_none() {
             bail!("response: Channel not connected!");
@@ -112,20 +113,8 @@ impl SshClient {
             }
 
             if bytes_read == 0 || self.channel.as_ref().unwrap().eof() {
-                // if self.channel.as_ref().unwrap().eof() {
-                // if bytes_read == 0 {
                 bail!("Buffer is empty, SSH channel read terminated");
-                // } else {
-                //     break; // read some response and closed socket
-                // }
             }
-            // if bytes_read == 0 {
-            //     return Err(std::io::Error::new(
-            //         io::ErrorKind::UnexpectedEof,
-            //         "Buffer is empty, SSH channel read terminated".to_string(),
-            //     )
-            //     .into());
-            // }
         }
         if let Some(stripped) = result.strip_suffix(MESSAGE_SEPARATOR) {
             result = stripped.to_string();
