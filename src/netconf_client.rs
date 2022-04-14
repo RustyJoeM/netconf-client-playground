@@ -5,6 +5,7 @@ use crate::{
     netconf::{
         messages::{
             close_session::{CloseSessionRequest, CloseSessionResponse},
+            copy_config::{CopyConfigRequest, CopyConfigResponse},
             get::{GetRequest, GetResponse},
             get_config::{GetConfigRequest, GetConfigResponse},
             hello::{HelloRequest, HelloResponse},
@@ -99,6 +100,19 @@ impl NetconfClient {
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response = GetConfigResponse::from_str(response_str)?;
+        Ok(response)
+    }
+
+    pub fn edit_config(
+        &mut self,
+        target: Datastore,
+        source: Datastore,
+    ) -> Result<CopyConfigResponse> {
+        let request = CopyConfigRequest::new(self.new_message_id(), target, source);
+        let request_str = to_string(&request)?;
+
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response = from_str(&response_str)?;
         Ok(response)
     }
 
