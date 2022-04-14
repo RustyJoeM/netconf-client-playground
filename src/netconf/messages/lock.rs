@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::netconf::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, RpcErrorRpc, RpcReply},
+    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
 /// The \<lock\> request for short-lived restriction of datastore access.
@@ -46,34 +46,4 @@ impl From<LockRequest> for LockRequestRpc {
     }
 }
 
-/// Response for the \<lock\> operation.
-#[derive(Debug, Deserialize)]
-#[serde(from = "LockResponseRpc")]
-pub struct LockResponse {
-    pub message_id: String,
-    pub xmlns: String,
-    pub reply: RpcReply,
-}
-
-#[derive(Debug, Deserialize)]
-struct LockResponseRpc {
-    #[serde(rename = "message-id")]
-    message_id: String,
-    xmlns: String,
-    ok: Option<()>,
-    #[serde(rename = "rpc-error")]
-    rpc_error: Option<RpcErrorRpc>,
-}
-
-impl From<LockResponseRpc> for LockResponse {
-    fn from(rpc: LockResponseRpc) -> Self {
-        LockResponse {
-            message_id: rpc.message_id,
-            xmlns: rpc.xmlns,
-            reply: match rpc.ok.is_some() {
-                true => RpcReply::Ok,
-                false => RpcReply::Error(rpc.rpc_error.unwrap().into()),
-            },
-        }
-    }
-}
+pub type LockResponse = SimpleResponse;

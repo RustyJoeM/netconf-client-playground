@@ -13,7 +13,7 @@ use crate::{
             lock::{LockRequest, LockResponse},
             unlock::{UnlockRequest, UnlockResponse},
         },
-        types::{Datastore, Filter},
+        types::{Datastore, Filter, RpcReply},
     },
     ssh_client::{SshAuthentication, SshClient},
 };
@@ -46,6 +46,7 @@ impl NetconfClient {
     pub fn hello(&mut self) -> Result<HelloResponse> {
         let request = HelloRequest::new(vec![]);
         let request_str = to_string(&request)?;
+
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response: HelloResponse = from_str(&response_str)?;
 
@@ -57,11 +58,14 @@ impl NetconfClient {
     pub fn close_session(&mut self) -> Result<CloseSessionResponse> {
         let request = CloseSessionRequest::new(self.new_message_id());
         let request_str = to_string(&request)?;
+
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response: CloseSessionResponse = from_str(&response_str)?;
 
-        self.ssh.drop_channel();
+        if RpcReply::Ok == response.reply {
+            self.ssh.drop_channel();
+        }
 
-        let response = from_str(&response_str)?;
         Ok(response)
     }
 

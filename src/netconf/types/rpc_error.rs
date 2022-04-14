@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(from = "RpcErrorRpc")]
 pub struct RpcError {
     pub error_type: ErrorType,
@@ -49,7 +49,7 @@ pub struct ErrorTypeRpc {
     pub item: ErrorType,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ErrorType {
     Transport,
@@ -58,7 +58,7 @@ pub enum ErrorType {
     Application,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ErrorSeverity {
     Error,

@@ -1,6 +1,6 @@
 use super::RpcError;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RpcReply {
     Ok,
     Error(RpcError),

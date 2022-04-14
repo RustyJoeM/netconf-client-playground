@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::netconf::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, RpcErrorRpc, RpcReply},
+    types::{tag_wrapper::TagWrapper, SimpleResponse},
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -50,33 +50,4 @@ impl From<KillSessionRequest> for KillSessionRequestRpc {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "KillSessionResponseRpc")]
-pub struct KillSessionResponse {
-    pub message_id: String,
-    pub xmlns: String,
-    pub reply: RpcReply,
-}
-
-#[derive(Debug, Deserialize)]
-struct KillSessionResponseRpc {
-    #[serde(rename = "message-id")]
-    message_id: String,
-    xmlns: String,
-    ok: Option<()>,
-    #[serde(rename = "rpc-error")]
-    rpc_error: Option<RpcErrorRpc>,
-}
-
-impl From<KillSessionResponseRpc> for KillSessionResponse {
-    fn from(rpc: KillSessionResponseRpc) -> Self {
-        KillSessionResponse {
-            message_id: rpc.message_id,
-            xmlns: rpc.xmlns,
-            reply: match rpc.rpc_error {
-                None => RpcReply::Ok,
-                Some(err) => RpcReply::Error(err.into()),
-            },
-        }
-    }
-}
+pub type KillSessionResponse = SimpleResponse;

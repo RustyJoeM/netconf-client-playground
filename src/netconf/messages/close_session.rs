@@ -1,9 +1,6 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-use crate::netconf::{
-    common::XMLNS,
-    types::{RpcError, RpcReply},
-};
+use crate::netconf::{common::XMLNS, types::SimpleResponse};
 
 /// Request for \<close-session\> operation.
 #[derive(Debug, Clone, Serialize)]
@@ -46,34 +43,4 @@ impl From<CloseSessionRequest> for CloseSessionRequestRpc {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "CloseSessionResponseRpc")]
-pub struct CloseSessionResponse {
-    pub message_id: String,
-    pub xmlns: String,
-    pub reply: RpcReply,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename = "rpc")]
-struct CloseSessionResponseRpc {
-    #[serde(rename = "message-id")]
-    message_id: String,
-    xmlns: String,
-    ok: Option<()>,
-    #[serde(rename = "rpc-error")]
-    rpc_error: Option<RpcError>,
-}
-
-impl From<CloseSessionResponseRpc> for CloseSessionResponse {
-    fn from(rpc: CloseSessionResponseRpc) -> Self {
-        CloseSessionResponse {
-            message_id: rpc.message_id,
-            xmlns: rpc.xmlns,
-            reply: match rpc.ok.is_some() {
-                true => RpcReply::Ok,
-                false => RpcReply::Error(rpc.rpc_error.unwrap()),
-            },
-        }
-    }
-}
+pub type CloseSessionResponse = SimpleResponse;
