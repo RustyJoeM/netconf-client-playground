@@ -3,9 +3,10 @@ use std::net::IpAddr;
 // TODO - split to pub responses, or possibly pub requests as well?
 use super::messages::{
     CloseSessionRequest, CloseSessionResponse, CopyConfigRequest, CopyConfigResponse,
-    DeleteConfigRequest, DeleteConfigResponse, GetConfigRequest, GetConfigResponse, GetRequest,
-    GetResponse, HelloRequest, HelloResponse, KillSessionRequest, KillSessionResponse, LockRequest,
-    LockResponse, UnlockRequest, UnlockResponse,
+    DeleteConfigRequest, DeleteConfigResponse, EditConfigParams, EditConfigRequest,
+    EditConfigResponse, GetConfigRequest, GetConfigResponse, GetRequest, GetResponse, HelloRequest,
+    HelloResponse, KillSessionRequest, KillSessionResponse, LockRequest, LockResponse,
+    UnlockRequest, UnlockResponse,
 };
 use super::ssh_client::SshClient;
 use super::types::{Capability, Datastore, Filter, RpcReply};
@@ -136,21 +137,21 @@ impl NetconfSession {
         Ok(response)
     }
 
-    pub fn request_edit_config(
-        &mut self,
-        target: Datastore,
-        source: Datastore,
-    ) -> Result<CopyConfigResponse> {
-        let request = CopyConfigRequest::new(self.new_message_id(), target, source);
-        let request_str = to_string(&request)?;
+    // TODO - untested - possibly unfinished/incorrect (de)serialization...
+    pub fn request_edit_config(&mut self, params: EditConfigParams) -> Result<EditConfigResponse> {
+        let request_str = EditConfigRequest::new_request_str(self.new_message_id(), params)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
         let response = from_str(&response_str)?;
         Ok(response)
     }
 
-    pub fn request_copy_config(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
-        let request = UnlockRequest::new(self.new_message_id(), datastore);
+    pub fn request_copy_config(
+        &mut self,
+        target: Datastore,
+        source: Datastore,
+    ) -> Result<CopyConfigResponse> {
+        let request = CopyConfigRequest::new(self.new_message_id(), target, source);
         let request_str = to_string(&request)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;

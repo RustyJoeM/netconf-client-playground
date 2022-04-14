@@ -1,12 +1,12 @@
 use std::fmt::Debug;
 
-use anyhow::{bail, Result};
-use quick_xml::{de::from_str, se::to_string};
-use serde::{Deserialize, Serialize};
+use anyhow::Result;
+use quick_xml::se::to_string;
+use serde::Serialize;
 
-use crate::netconf::{
-    common::{get_tag_slice, XMLNS},
-    types::{tag_wrapper::TagWrapper, Datastore, Filter, RpcErrorRpc, RpcReply},
+use crate::netconf_client::{
+    common::XMLNS,
+    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
 // TODO - url parameter - https://datatracker.ietf.org/doc/html/rfc6241#section-8.8
@@ -35,6 +35,7 @@ pub enum TestOption {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum ErrorOption {
     StopOnError,
     ContinueOnError,
@@ -141,44 +142,4 @@ struct TargetRpc {
     item: Datastore,
 }
 
-// #[derive(Debug)]
-// pub struct GetConfigResponse {
-//     full_dump: String,
-//     pub message_id: String,
-//     pub xmlns: String,
-//     pub reply: RpcReply,
-// }
-
-// #[derive(Debug, Deserialize, Clone)]
-// struct GetConfigResponseRpc {
-//     #[serde(rename = "message-id")]
-//     message_id: String,
-//     xmlns: String,
-//     #[serde(rename = "rpc-error")]
-//     rpc_error: Option<RpcErrorRpc>,
-// }
-
-// impl GetConfigResponse {
-//     pub fn from_str(s: String) -> Result<Self> {
-//         let rpc: GetConfigResponseRpc = from_str(&s)?;
-//         let message_id = rpc.message_id;
-//         let xmlns = rpc.xmlns;
-//         let reply = match rpc.rpc_error {
-//             None => RpcReply::Ok,
-//             Some(err) => RpcReply::Error(err.into()),
-//         };
-//         Ok(Self {
-//             full_dump: s,
-//             message_id,
-//             xmlns,
-//             reply,
-//         })
-//     }
-
-//     pub fn data(&self) -> Result<&str> {
-//         match self.reply {
-//             RpcReply::Ok => get_tag_slice(&self.full_dump, "data"),
-//             RpcReply::Error(_) => bail!("No data in error reply"),
-//         }
-//     }
-// }
+pub type EditConfigResponse = SimpleResponse;

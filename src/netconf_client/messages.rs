@@ -7,7 +7,8 @@ pub use copy_config::{CopyConfigRequest, CopyConfigResponse};
 mod delete_config;
 pub use delete_config::{DeleteConfigRequest, DeleteConfigResponse};
 
-// mod edit_config;
+mod edit_config;
+pub use edit_config::{EditConfigParams, EditConfigRequest, EditConfigResponse};
 
 mod get;
 pub use get::{GetRequest, GetResponse};
