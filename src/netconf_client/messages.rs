@@ -27,3 +27,9 @@ pub use lock::{LockRequest, LockResponse};
 
 mod unlock;
 pub use unlock::{UnlockRequest, UnlockResponse};
+
+mod commit;
+pub use commit::{CommitRequest, CommitResponse};
+
+mod discard_changes;
+pub use discard_changes::{DiscardChangesRequest, DiscardChangesResponse};

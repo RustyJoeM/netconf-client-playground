@@ -20,8 +20,8 @@ fn main() -> Result<()> {
 
     dbg!(client.connect()?);
     dbg!(client.request_hello()?);
-    dbg!(client.request_lock(Datastore::Running)?);
-    dbg!(client.request_unlock(Datastore::Running)?);
+    // dbg!(client.request_lock(Datastore::Running)?);
+    // dbg!(client.request_unlock(Datastore::Running)?);
     // dbg!(client.get(None)?);
 
     // use crate::netconf::types::{Filter, FilterType};
@@ -34,6 +34,8 @@ fn main() -> Result<()> {
     // let res = client.get_config(Datastore::Running, Some(filter))?;
     // dbg!(res.data()?);
 
+    // dbg!(client.request_commit()?);
+    // dbg!(client.request_discard_changes()?);
     // dbg!(client.kill_session(11)?);
     dbg!(client.request_close_session()?);
 

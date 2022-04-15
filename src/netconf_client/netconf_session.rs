@@ -2,11 +2,12 @@ use std::net::IpAddr;
 
 // TODO - split to pub responses, or possibly pub requests as well?
 use super::messages::{
-    CloseSessionRequest, CloseSessionResponse, CopyConfigRequest, CopyConfigResponse,
-    DeleteConfigRequest, DeleteConfigResponse, EditConfigParams, EditConfigRequest,
-    EditConfigResponse, GetConfigRequest, GetConfigResponse, GetRequest, GetResponse, HelloRequest,
-    HelloResponse, KillSessionRequest, KillSessionResponse, LockRequest, LockResponse,
-    UnlockRequest, UnlockResponse,
+    CloseSessionRequest, CloseSessionResponse, CommitRequest, CommitResponse, CopyConfigRequest,
+    CopyConfigResponse, DeleteConfigRequest, DeleteConfigResponse, DiscardChangesRequest,
+    DiscardChangesResponse, EditConfigParams, EditConfigRequest, EditConfigResponse,
+    GetConfigRequest, GetConfigResponse, GetRequest, GetResponse, HelloRequest, HelloResponse,
+    KillSessionRequest, KillSessionResponse, LockRequest, LockResponse, UnlockRequest,
+    UnlockResponse,
 };
 use super::ssh_client::SshClient;
 use super::types::{Capability, Datastore, Filter, RpcReply};
@@ -52,6 +53,13 @@ impl NetconfSession {
     fn new_message_id(&mut self) -> String {
         self.last_message_id = self.last_message_id.saturating_add(1);
         self.last_message_id.to_string()
+    }
+
+    fn got_server_capability(&self, cap: Capability) -> bool {
+        match &self.server_capabilities {
+            Some(caps) => caps.contains(&cap),
+            None => false,
+        }
     }
 
     /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.
@@ -139,6 +147,11 @@ impl NetconfSession {
 
     // TODO - untested - possibly unfinished/incorrect (de)serialization...
     pub fn request_edit_config(&mut self, params: EditConfigParams) -> Result<EditConfigResponse> {
+        if params.target == Datastore::Running
+            && !self.got_server_capability(Capability::WritableRunning)
+        {
+            bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
+        };
         let request_str = EditConfigRequest::new_request_str(self.new_message_id(), params)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
@@ -151,6 +164,10 @@ impl NetconfSession {
         target: Datastore,
         source: Datastore,
     ) -> Result<CopyConfigResponse> {
+        if target == Datastore::Running && !self.got_server_capability(Capability::WritableRunning)
+        {
+            bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
+        };
         let request = CopyConfigRequest::new(self.new_message_id(), target, source);
         let request_str = to_string(&request)?;
 
@@ -170,6 +187,30 @@ impl NetconfSession {
 
     pub fn request_kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
         let request = KillSessionRequest::new(self.new_message_id(), session_id);
+        let request_str = to_string(&request)?;
+
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response = from_str(&response_str)?;
+        Ok(response)
+    }
+
+    pub fn request_commit(&mut self) -> Result<CommitResponse> {
+        if !self.got_server_capability(Capability::Candidate) {
+            bail!("<commit> operation allowed only for :candidate enabled servers!");
+        };
+        let request = CommitRequest::new(self.new_message_id());
+        let request_str = to_string(&request)?;
+
+        let response_str = self.ssh.dispatch_xml_request(&request_str)?;
+        let response = from_str(&response_str)?;
+        Ok(response)
+    }
+
+    pub fn request_discard_changes(&mut self) -> Result<DiscardChangesResponse> {
+        if !self.got_server_capability(Capability::Candidate) {
+            bail!("<discard-changes> operation allowed only for :candidate enabled servers!");
+        };
+        let request = DiscardChangesRequest::new(self.new_message_id());
         let request_str = to_string(&request)?;
 
         let response_str = self.ssh.dispatch_xml_request(&request_str)?;
