@@ -82,24 +82,26 @@ impl From<EditConfigParams> for EditConfigRpc {
 }
 
 impl EditConfigRequest {
-    fn new(message_id: String, params: EditConfigParams) -> Self {
+    pub fn new(message_id: String, params: EditConfigParams) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
             params,
         }
     }
+}
 
-    pub fn new_request_str(message_id: String, params: EditConfigParams) -> Result<String> {
+impl super::NetconfRequest for EditConfigRequest {
+    fn to_netconf_rpc(&self) -> Result<std::string::String, anyhow::Error> {
         const TOKEN: &str = "MAGIC_TOKEN";
-        let mut params = params;
+        let mut params = self.params.clone();
 
         // reset <config> contents for automatic serialization to a TOKEN to be replaced later
         let config_str = params.config;
         params.config = TOKEN.to_string();
 
         // serialize RPC without <config> data
-        let instance = Self::new(message_id, params);
+        let instance = Self::new(self.message_id.clone(), params);
         let mut instance_str = to_string(&instance)?;
         // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)
         instance_str = instance_str.replace(TOKEN, &config_str);

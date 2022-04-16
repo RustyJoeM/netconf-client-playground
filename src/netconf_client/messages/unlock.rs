@@ -20,6 +20,13 @@ impl UnlockRequest {
     }
 }
 
+impl super::NetconfRequest for UnlockRequest {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let res = quick_xml::se::to_string(self)?;
+        Ok(res)
+    }
+}
+
 /// Private representation of \<lock\> RPC used for serialization.
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]

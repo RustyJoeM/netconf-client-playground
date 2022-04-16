@@ -16,6 +16,13 @@ pub struct CopyConfigRequest {
     pub source: Datastore,
 }
 
+impl super::NetconfRequest for CopyConfigRequest {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let res = quick_xml::se::to_string(&self)?;
+        Ok(res)
+    }
+}
+
 impl From<CopyConfigRequest> for CopyConfigRequestRpc {
     fn from(request: CopyConfigRequest) -> Self {
         CopyConfigRequestRpc {

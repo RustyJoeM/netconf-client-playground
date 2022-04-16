@@ -14,3 +14,6 @@ pub use rpc_reply::RpcReply;
 pub use simple_response::SimpleResponse;
 
 pub mod tag_wrapper;
+
+#[derive(Debug, serde::Serialize)]
+pub struct EmptyStruct;

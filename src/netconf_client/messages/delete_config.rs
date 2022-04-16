@@ -15,6 +15,13 @@ pub struct DeleteConfigRequest {
     pub target: Datastore,
 }
 
+impl super::NetconfRequest for DeleteConfigRequest {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let res = quick_xml::se::to_string(&self)?;
+        Ok(res)
+    }
+}
+
 impl From<DeleteConfigRequest> for DeleteConfigRequestRpc {
     fn from(request: DeleteConfigRequest) -> Self {
         DeleteConfigRequestRpc {

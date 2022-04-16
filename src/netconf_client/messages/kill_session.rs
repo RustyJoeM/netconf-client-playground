@@ -13,6 +13,13 @@ pub struct KillSessionRequest {
     pub session_id: u32,
 }
 
+impl super::NetconfRequest for KillSessionRequest {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let res = quick_xml::se::to_string(&self)?;
+        Ok(res)
+    }
+}
+
 impl KillSessionRequest {
     pub fn new(message_id: String, session_id: u32) -> Self {
         Self {

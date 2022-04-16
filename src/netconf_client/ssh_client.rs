@@ -9,6 +9,8 @@ use std::{
     net::{IpAddr, SocketAddr, TcpStream},
 };
 
+use super::messages::NetconfRequest;
+
 /// RFC specified NETCONF message separator.
 const MESSAGE_SEPARATOR: &str = "]]>]]>";
 const SSH_TIMEOUT: u32 = 5000;
@@ -81,9 +83,9 @@ impl SshClient {
 
     /// Dispatches the input data over connected SSH stream.
     /// Returns the String containing whole reponse received from server up to & excluding the NETCONF message separator.
-    pub fn dispatch_xml_request(&mut self, data: &str) -> Result<String> {
+    pub fn dispatch_netconf_request(&mut self, request: &impl NetconfRequest) -> Result<String> {
         if self.channel.is_some() {
-            let cmd = data.to_string() + MESSAGE_SEPARATOR;
+            let cmd = request.to_netconf_rpc()? + MESSAGE_SEPARATOR;
             self.write_all(cmd.as_bytes())?;
             let res = self.get_reply()?;
             Ok(res)

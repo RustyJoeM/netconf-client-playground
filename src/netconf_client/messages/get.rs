@@ -30,17 +30,19 @@ impl From<GetRequest> for GetRequestRpc {
 }
 
 impl GetRequest {
-    fn new(message_id: String, filter: Option<Filter>) -> Self {
+    pub fn new(message_id: String, filter: Option<Filter>) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
             filter,
         }
     }
+}
 
-    pub fn new_request_str(message_id: String, filter: Option<Filter>) -> Result<String> {
+impl super::NetconfRequest for GetRequest {
+    fn to_netconf_rpc(&self) -> Result<String> {
         const TOKEN: &str = "MAGIC_TOKEN";
-        let mut filter = filter;
+        let mut filter = self.filter.clone();
 
         // extract user-defined filter data
         let filter_str: Option<String> = match &mut filter {
@@ -54,7 +56,7 @@ impl GetRequest {
         };
 
         // serialize RPC without filter data (if some)
-        let instance = Self::new(message_id, filter);
+        let instance = Self::new(self.message_id.clone(), filter);
         let mut instance_str = to_string(&instance)?;
 
         // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)

@@ -29,7 +29,20 @@ mod unlock;
 pub use unlock::{UnlockRequest, UnlockResponse};
 
 mod commit;
-pub use commit::{CommitRequest, CommitResponse};
+pub use commit::{CommitRequest, CommitResponse, ConfirmedCommitParams};
 
 mod discard_changes;
 pub use discard_changes::{DiscardChangesRequest, DiscardChangesResponse};
+
+mod cancel_commit;
+pub use cancel_commit::{CancelCommitRequest, CancelCommitResponse};
+
+use anyhow::Result;
+
+pub trait NetconfRequest {
+    fn to_netconf_rpc(&self) -> Result<String>;
+}
+
+pub trait NetconfResponse {
+    fn from_netconf_rpc(s: String) -> Self;
+}

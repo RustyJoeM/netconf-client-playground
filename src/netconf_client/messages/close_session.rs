@@ -2,12 +2,21 @@ use serde::Serialize;
 
 use crate::netconf_client::{common::XMLNS, types::SimpleResponse};
 
+use super::NetconfRequest;
+
 /// Request for \<close-session\> operation.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "CloseSessionRequestRpc")]
 pub struct CloseSessionRequest {
     message_id: String,
     xmlns: String,
+}
+
+impl NetconfRequest for CloseSessionRequest {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let res = quick_xml::se::to_string(self)?;
+        Ok(res)
+    }
 }
 
 /// Private RPC representation of \<close-session\> request.

@@ -11,6 +11,13 @@ pub struct DiscardChangesRequest {
     pub xmlns: String,
 }
 
+impl super::NetconfRequest for DiscardChangesRequest {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let res = quick_xml::se::to_string(&self)?;
+        Ok(res)
+    }
+}
+
 impl From<DiscardChangesRequest> for DiscardChangesRequestRpc {
     fn from(request: DiscardChangesRequest) -> Self {
         DiscardChangesRequestRpc {
