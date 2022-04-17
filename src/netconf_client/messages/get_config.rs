@@ -9,6 +9,8 @@ use crate::netconf_client::{
     types::{Datastore, Filter, FilterRpc, RpcErrorRpc, RpcReply},
 };
 
+use super::NetconfResponse;
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "GetConfigRequestRpc")]
 pub struct GetConfigRequest {
@@ -112,8 +114,11 @@ struct GetConfigResponseRpc {
     rpc_error: Option<RpcErrorRpc>,
 }
 
-impl GetConfigResponse {
-    pub fn from_str(s: String) -> Result<Self> {
+impl NetconfResponse for GetConfigResponse {
+    fn from_netconf_rpc(s: String) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let rpc: GetConfigResponseRpc = from_str(&s)?;
         let message_id = rpc.message_id;
         let xmlns = rpc.xmlns;
@@ -128,7 +133,9 @@ impl GetConfigResponse {
             reply,
         })
     }
+}
 
+impl GetConfigResponse {
     pub fn data(&self) -> Result<&str> {
         match self.reply {
             RpcReply::Ok => get_tag_slice(&self.full_dump, "data"),

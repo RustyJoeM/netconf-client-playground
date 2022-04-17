@@ -59,6 +59,8 @@ impl From<HelloRequest> for HelloRequestRpc {
     }
 }
 
+// TODO - error case?
+
 /// Initial \<hello\> response sent by NETCONF server.
 #[derive(Debug, Deserialize)]
 #[serde(from = "HelloResponseRpc")]
@@ -90,5 +92,15 @@ impl From<HelloResponseRpc> for HelloResponse {
                 .map(|cap| Capability::from_urn(&cap.item))
                 .collect(),
         }
+    }
+}
+
+impl super::NetconfResponse for HelloResponse {
+    fn from_netconf_rpc(s: String) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
+        let res = quick_xml::de::from_str(&s)?;
+        Ok(res)
     }
 }

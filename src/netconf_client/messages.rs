@@ -44,5 +44,7 @@ pub trait NetconfRequest {
 }
 
 pub trait NetconfResponse {
-    fn from_netconf_rpc(s: String) -> Self;
+    fn from_netconf_rpc(s: String) -> Result<Self>
+    where
+        Self: Sized;
 }

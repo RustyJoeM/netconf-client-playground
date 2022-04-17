@@ -1,10 +1,10 @@
 use std::fmt::Debug;
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::netconf_client::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, RpcErrorRpc, RpcReply},
+    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -64,33 +64,4 @@ struct CopyConfigRpc {
     source: TagWrapper<Datastore>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "CopyConfigResponseRpc")]
-pub struct CopyConfigResponse {
-    pub message_id: String,
-    pub xmlns: String,
-    pub reply: RpcReply,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-struct CopyConfigResponseRpc {
-    #[serde(rename = "message-id")]
-    message_id: String,
-    xmlns: String,
-    ok: Option<()>,
-    #[serde(rename = "rpc-error")]
-    rpc_error: Option<RpcErrorRpc>,
-}
-
-impl From<CopyConfigResponseRpc> for CopyConfigResponse {
-    fn from(rpc: CopyConfigResponseRpc) -> Self {
-        CopyConfigResponse {
-            message_id: rpc.message_id,
-            xmlns: rpc.xmlns,
-            reply: match rpc.rpc_error {
-                None => RpcReply::Ok,
-                Some(err) => RpcReply::Error(err.into()),
-            },
-        }
-    }
-}
+pub type CopyConfigResponse = SimpleResponse;

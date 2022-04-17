@@ -1,7 +1,10 @@
 use anyhow::{bail, Result};
 use serde::Deserialize;
 
-use crate::netconf_client::types::{RpcError, RpcReply};
+use crate::netconf_client::{
+    messages::NetconfResponse,
+    types::{RpcError, RpcReply},
+};
 
 /// Simple response type used by several NETCONF operations,
 /// when NETCONF server returns either:
@@ -45,5 +48,15 @@ impl TryFrom<SimpleResponseRpc> for SimpleResponse {
             xmlns,
             reply,
         })
+    }
+}
+
+impl NetconfResponse for SimpleResponse {
+    fn from_netconf_rpc(s: String) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let res: Self = quick_xml::de::from_str(&s)?;
+        Ok(res)
     }
 }

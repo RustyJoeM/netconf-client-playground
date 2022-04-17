@@ -7,7 +7,7 @@ use super::messages::{
     DeleteConfigResponse, DiscardChangesRequest, DiscardChangesResponse, EditConfigRequest,
     EditConfigResponse, GetConfigRequest, GetConfigResponse, GetRequest, GetResponse, HelloRequest,
     HelloResponse, KillSessionRequest, KillSessionResponse, LockRequest, LockResponse,
-    UnlockRequest, UnlockResponse,
+    NetconfResponse, UnlockRequest, UnlockResponse,
 };
 
 pub use super::messages::{ConfirmedCommitParams, EditConfigParams};
@@ -16,7 +16,6 @@ use super::types::{Capability, Datastore, Filter, RpcReply};
 use super::SshAuthentication;
 
 use anyhow::{bail, Result};
-use quick_xml::de::from_str;
 
 /// The core NETCONF client. Simple blocking implementation that allows streaming
 /// NETCONF RPC messages to a target server.
@@ -69,9 +68,8 @@ impl NetconfSession {
     /// Server capabilities are stored in the [`Self`] instance after successful invocation.
     pub fn request_hello(&mut self) -> Result<HelloResponse> {
         let request = HelloRequest::new(self.client_capabilities.clone());
-
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response: HelloResponse = from_str(&response_str)?;
+        let response = HelloResponse::from_netconf_rpc(response_str)?;
 
         self.session_id = Some(response.session_id);
         self.server_capabilities = Some(response.capabilities.clone());
@@ -96,9 +94,8 @@ impl NetconfSession {
 
     pub fn request_close_session(&mut self) -> Result<CloseSessionResponse> {
         let request = CloseSessionRequest::new(self.new_message_id());
-
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response: CloseSessionResponse = from_str(&response_str)?;
+        let response = CloseSessionResponse::from_netconf_rpc(response_str)?;
 
         if RpcReply::Ok == response.reply {
             self.ssh.disconnect()?;
@@ -110,15 +107,13 @@ impl NetconfSession {
     pub fn request_lock(&mut self, datastore: Datastore) -> Result<LockResponse> {
         let request = LockRequest::new(self.new_message_id(), datastore);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        LockResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_unlock(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
         let request = UnlockRequest::new(self.new_message_id(), datastore);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        UnlockResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_get(&mut self, filter: Option<Filter>) -> Result<GetResponse> {
@@ -135,8 +130,7 @@ impl NetconfSession {
     ) -> Result<GetConfigResponse> {
         let request = GetConfigRequest::new(self.new_message_id(), source, filter);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = GetConfigResponse::from_str(response_str)?;
-        Ok(response)
+        GetConfigResponse::from_netconf_rpc(response_str)
     }
 
     // TODO - untested - possibly unfinished/incorrect (de)serialization...
@@ -149,8 +143,7 @@ impl NetconfSession {
 
         let request = EditConfigRequest::new(self.new_message_id(), params);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        EditConfigResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_copy_config(
@@ -165,29 +158,25 @@ impl NetconfSession {
 
         let request = CopyConfigRequest::new(self.new_message_id(), target, source);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        CopyConfigResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_delete_config(&mut self, target: Datastore) -> Result<DeleteConfigResponse> {
         let request = DeleteConfigRequest::new(self.new_message_id(), target);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        DeleteConfigResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
         let request = KillSessionRequest::new(self.new_message_id(), session_id);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        KillSessionResponse::from_netconf_rpc(response_str)
     }
 
     fn commit(&mut self, params: Option<ConfirmedCommitParams>) -> Result<CommitResponse> {
         let request = CommitRequest::new(self.new_message_id(), params);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        CommitResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_commit(&mut self) -> Result<CommitResponse> {
@@ -213,8 +202,7 @@ impl NetconfSession {
         };
         let request = DiscardChangesRequest::new(self.new_message_id());
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        DiscardChangesResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_cancel_commit(
@@ -226,8 +214,7 @@ impl NetconfSession {
         };
         let request = CancelCommitRequest::new(self.new_message_id(), persist_id);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = from_str(&response_str)?;
-        Ok(response)
+        CancelCommitResponse::from_netconf_rpc(response_str)
     }
 
     // TODO check for :candidate in <get-config>, <edit-config>, <copy-config>, and <validate>
