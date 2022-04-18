@@ -68,11 +68,26 @@ impl NetconfSession {
         self.last_message_id.to_string()
     }
 
+    /// Check whether specific Capability is among the ones advertised by the connected NETCONF server.
     fn got_server_capability(&self, cap: Capability) -> bool {
         match &self.server_capabilities {
             Some(caps) => caps.contains(&cap),
             None => false,
         }
+    }
+
+    /// All-in-one constructor that connects to the target NETCONF server,
+    /// and exchanges the \<hello\> messages and capabilities information.
+    pub fn initialize(
+        address: IpAddr,
+        port: u16,
+        auth: SshAuthentication,
+        client_capabilities: Vec<Capability>,
+    ) -> Result<Self> {
+        let mut instance = Self::new(address, port, auth, client_capabilities);
+        instance.connect()?;
+        instance.request_hello()?;
+        Ok(instance)
     }
 
     /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.

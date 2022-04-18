@@ -76,8 +76,10 @@ struct ConfirmedCommitRequestRpc {
 #[derive(Debug, Serialize)]
 struct ConfirmedCommitRpc {
     confirmed: EmptyStruct,
+    #[serde(rename = "confirm-timeout")]
     confirm_timeout: Option<TagWrapper<u32>>,
     persist: Option<TagWrapper<String>>,
+    #[serde(rename = "persist-id")]
     persist_id: Option<TagWrapper<String>>,
 }
 

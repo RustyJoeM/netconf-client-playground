@@ -10,3 +10,8 @@
 - RPC custom attributes not taken into account in request/response - https://datatracker.ietf.org/doc/html/rfc6241#section-4.2
 
 - fancy rust-doc comments all around!
+
+- use-cases:
+    - dump RPC for various operations
+    - live REPL mode (async CLI?)
+    - GUI (distant future, if at all?)

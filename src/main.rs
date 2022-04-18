@@ -5,40 +5,44 @@
 use anyhow::Result;
 
 mod netconf_client;
-use crate::netconf_client::{
-    types::{Capability, Datastore},
-    NetconfSession, SshAuthentication,
-};
+use crate::netconf_client::{types::Capability, NetconfSession, SshAuthentication};
 
 fn main() -> Result<()> {
-    let mut client = NetconfSession::new(
+    let mut session = NetconfSession::initialize(
         "127.0.0.1".parse()?,
         2022,
         SshAuthentication::UserPassword("admin".to_string(), "admin".to_string()),
         vec![Capability::Base],
-    );
-    client.set_validate_capabilities(false);
+    )?;
+    session.set_validate_capabilities(false);
 
-    dbg!(client.connect()?);
-    dbg!(client.request_hello()?);
-    // dbg!(client.request_lock(Datastore::Running)?);
-    // dbg!(client.request_unlock(Datastore::Running)?);
-    // dbg!(client.get(None)?);
+    // dbg!(session.request_lock(Datastore::Running)?);
+    // dbg!(session.request_unlock(Datastore::Running)?);
+    // dbg!(session.request_get(None)?);
 
     // use crate::netconf::types::{Filter, FilterType};
     // let filter = Filter {
     //     filter_type: FilterType::Subtree,
     //     data: "<dhcp xmlns=\"http://tail-f.com/ns/example/dhcpd\"/>".to_string(),
     // };
-    // // let res = client.get(Some(filter))?;
+    // // let res = session.request_get(Some(filter))?;
     // use crate::netconf::types::Datastore;
-    // let res = client.get_config(Datastore::Running, Some(filter))?;
+    // let res = session.request_get_config(Datastore::Running, Some(filter))?;
     // dbg!(res.data()?);
 
-    // dbg!(client.request_commit()?);
-    // dbg!(client.request_discard_changes()?);
-    // dbg!(client.kill_session(11)?);
-    dbg!(client.request_close_session()?);
+    // dbg!(session.request_commit()?);
+
+    // use crate::netconf_client::ConfirmedCommitParams;
+    // let params = ConfirmedCommitParams {
+    //     confirm_timeout: Some(30),
+    //     persist: Some("abra".to_string()),
+    //     persist_id: Some("cadabra".to_string()),
+    // };
+    // dbg!(session.request_confirmed_commit(params)?);
+
+    // dbg!(session.request_discard_changes()?);
+    // dbg!(session.kill_session(11)?);
+    dbg!(session.request_close_session()?);
 
     // use netconf::{
     //     messages::edit_config::{EditConfigParams, EditConfigRequest},
