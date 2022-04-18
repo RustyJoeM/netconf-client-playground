@@ -17,6 +17,7 @@ fn main() -> Result<()> {
         SshAuthentication::UserPassword("admin".to_string(), "admin".to_string()),
         vec![Capability::Base],
     );
+    client.set_validate_capabilities(false);
 
     dbg!(client.connect()?);
     dbg!(client.request_hello()?);

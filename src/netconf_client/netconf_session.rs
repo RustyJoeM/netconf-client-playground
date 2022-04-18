@@ -25,6 +25,7 @@ pub struct NetconfSession {
     session_id: Option<u32>,
     client_capabilities: Vec<Capability>,
     server_capabilities: Option<Vec<Capability>>,
+    validate_capabilities: bool,
 }
 
 impl NetconfSession {
@@ -42,7 +43,18 @@ impl NetconfSession {
             session_id: None,
             client_capabilities,
             server_capabilities: None,
+            validate_capabilities: true,
         }
+    }
+
+    /// Set whether to perform server capabilities check before dispatching the actual RPCs to server.
+    ///
+    /// Upon initial \<hello\> exchange when session is created, capabilities advertised by NETCONF server are stored internally.
+    /// All subsequent checks are executed "offline" against this capability set.
+    ///
+    /// This setting is `true` by default.
+    pub fn set_validate_capabilities(&mut self, do_validate: bool) {
+        self.validate_capabilities = do_validate;
     }
 
     /// Establish connection to target server.
@@ -78,18 +90,21 @@ impl NetconfSession {
         // If no protocol version capability in common is found, the NETCONF peer MUST NOT continue the
         // session. If more than one protocol version URI in common is present, then the highest numbered
         // (most recent) protocol version MUST be used by both peers.
-        for base in vec![Capability::Base11, Capability::Base] {
-            if !self.client_capabilities.contains(&base) {
-                continue;
-            }
-            if let Some(caps) = &self.server_capabilities {
-                if caps.contains(&base) {
-                    return Ok(response);
+        if self.validate_capabilities {
+            for base in vec![Capability::Base11, Capability::Base] {
+                if !self.client_capabilities.contains(&base) {
+                    continue;
+                }
+                if let Some(caps) = &self.server_capabilities {
+                    if caps.contains(&base) {
+                        return Ok(response);
+                    }
                 }
             }
+            bail!("No common base capability found!".to_string())
         }
 
-        bail!("No common base capability found!".to_string())
+        Ok(response)
     }
 
     pub fn request_close_session(&mut self) -> Result<CloseSessionResponse> {
@@ -119,8 +134,7 @@ impl NetconfSession {
     pub fn request_get(&mut self, filter: Option<Filter>) -> Result<GetResponse> {
         let request = GetRequest::new(self.new_message_id(), filter);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = GetResponse::from_str(response_str)?;
-        Ok(response)
+        GetResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_get_config(
@@ -135,7 +149,8 @@ impl NetconfSession {
 
     // TODO - untested - possibly unfinished/incorrect (de)serialization...
     pub fn request_edit_config(&mut self, params: EditConfigParams) -> Result<EditConfigResponse> {
-        if params.target == Datastore::Running
+        if self.validate_capabilities
+            && params.target == Datastore::Running
             && !self.got_server_capability(Capability::WritableRunning)
         {
             bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
@@ -151,7 +166,9 @@ impl NetconfSession {
         target: Datastore,
         source: Datastore,
     ) -> Result<CopyConfigResponse> {
-        if target == Datastore::Running && !self.got_server_capability(Capability::WritableRunning)
+        if self.validate_capabilities
+            && target == Datastore::Running
+            && !self.got_server_capability(Capability::WritableRunning)
         {
             bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
         };
@@ -180,7 +197,7 @@ impl NetconfSession {
     }
 
     pub fn request_commit(&mut self) -> Result<CommitResponse> {
-        if !self.got_server_capability(Capability::Candidate) {
+        if self.validate_capabilities && !self.got_server_capability(Capability::Candidate) {
             bail!("<commit> operation allowed only for :candidate enabled servers!");
         };
         self.commit(None)
@@ -190,14 +207,14 @@ impl NetconfSession {
         &mut self,
         params: ConfirmedCommitParams,
     ) -> Result<CommitResponse> {
-        if !self.got_server_capability(Capability::ConfirmedCommit) {
+        if self.validate_capabilities && !self.got_server_capability(Capability::ConfirmedCommit) {
             bail!("<commit> operation with parameters allowed only for :confirmed-commit enabled servers!");
         };
         self.commit(Some(params))
     }
 
     pub fn request_discard_changes(&mut self) -> Result<DiscardChangesResponse> {
-        if !self.got_server_capability(Capability::Candidate) {
+        if self.validate_capabilities && !self.got_server_capability(Capability::Candidate) {
             bail!("<discard-changes> operation allowed only for :candidate enabled servers!");
         };
         let request = DiscardChangesRequest::new(self.new_message_id());
@@ -209,7 +226,7 @@ impl NetconfSession {
         &mut self,
         persist_id: Option<u32>,
     ) -> Result<CancelCommitResponse> {
-        if !self.got_server_capability(Capability::ConfirmedCommit) {
+        if self.validate_capabilities && !self.got_server_capability(Capability::ConfirmedCommit) {
             bail!("<cancel-commit> operation allowed only for :confirmed-commit enabled servers!");
         };
         let request = CancelCommitRequest::new(self.new_message_id(), persist_id);
