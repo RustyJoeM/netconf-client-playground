@@ -49,7 +49,7 @@ impl From<HelloRequest> for HelloRequestRpc {
             items: request
                 .capabilities
                 .iter()
-                .map(|cap| cap.get_urn().to_string().into())
+                .map(|cap| cap.get_urn().into())
                 .collect(),
         };
         HelloRequestRpc {
@@ -89,7 +89,7 @@ impl From<HelloResponseRpc> for HelloResponse {
                 .capabilities
                 .items
                 .iter()
-                .map(|cap| Capability::from_urn(&cap.item))
+                .map(|cap| Capability::from_urn(&cap.item).unwrap())
                 .collect(),
         }
     }

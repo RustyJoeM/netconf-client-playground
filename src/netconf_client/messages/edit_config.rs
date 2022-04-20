@@ -9,8 +9,6 @@ use crate::netconf_client::{
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
-// TODO - url parameter - https://datatracker.ietf.org/doc/html/rfc6241#section-8.8
-
 /// TODO - operation for \<edit-config\> elements, but not used due to nested generic XML here...
 pub enum Operation {
     Merge,
@@ -34,7 +32,7 @@ pub enum TestOption {
     TestOnly,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq)]
 #[allow(clippy::enum_variant_names)]
 pub enum ErrorOption {
     StopOnError,
@@ -51,12 +49,18 @@ pub struct EditConfigRequest {
 }
 
 #[derive(Debug, Clone)]
+pub enum EditConfigContent {
+    Config(String),
+    Url(String),
+}
+
+#[derive(Debug, Clone)]
 pub struct EditConfigParams {
     pub target: Datastore,
     pub default_operation: Option<DefaultOperation>,
     pub test_option: Option<TestOption>,
     pub error_option: Option<ErrorOption>,
-    pub config: String, // TODO - url instead of config (see TODO rfc ref above)
+    pub config: EditConfigContent,
 }
 
 impl From<EditConfigRequest> for EditConfigRequestRpc {
@@ -71,12 +75,21 @@ impl From<EditConfigRequest> for EditConfigRequestRpc {
 
 impl From<EditConfigParams> for EditConfigRpc {
     fn from(params: EditConfigParams) -> Self {
+        let config = match &params.config {
+            EditConfigContent::Config(config) => Some(TagWrapper::new(config.to_owned())),
+            EditConfigContent::Url(_) => None,
+        };
+        let url = match &params.config {
+            EditConfigContent::Config(_) => None,
+            EditConfigContent::Url(url) => Some(TagWrapper::new(url.to_owned())),
+        };
         Self {
             target: TagWrapper::new(params.target),
             default_operation: params.default_operation.map(TagWrapper::new),
             test_option: params.test_option.map(TagWrapper::new),
             error_option: params.error_option.map(TagWrapper::new),
-            config: TagWrapper::new(params.config),
+            config,
+            url,
         }
     }
 }
@@ -96,15 +109,23 @@ impl super::NetconfRequest for EditConfigRequest {
         const TOKEN: &str = "MAGIC_TOKEN";
         let mut params = self.params.clone();
 
-        // reset <config> contents for automatic serialization to a TOKEN to be replaced later
-        let config_str = params.config;
-        params.config = TOKEN.to_string();
+        // reset <config> / <url> contents for automatic serialization to a TOKEN to be replaced later
+        let config_backup = params.config;
+        let s = TOKEN.to_string();
+        params.config = match &config_backup {
+            EditConfigContent::Config(_) => EditConfigContent::Config(s),
+            EditConfigContent::Url(_) => EditConfigContent::Url(s),
+        };
 
-        // serialize RPC without <config> data
+        // serialize RPC without <config> / <url> data
         let instance = Self::new(self.message_id.clone(), params);
         let mut instance_str = to_string(&instance)?;
         // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)
-        instance_str = instance_str.replace(TOKEN, &config_str);
+        let s = match &config_backup {
+            EditConfigContent::Config(config) => config,
+            EditConfigContent::Url(url) => url,
+        };
+        instance_str = instance_str.replace(TOKEN, s);
         Ok(instance_str)
     }
 }
@@ -129,19 +150,14 @@ struct EditConfigRpc {
     test_option: Option<TagWrapper<TestOption>>,
     #[serde(rename = "error-option")]
     error_option: Option<TagWrapper<ErrorOption>>,
-    config: TagWrapper<String>, // TODO - url instead of config (see TODO rfc ref above)
+    config: Option<TagWrapper<String>>,
+    url: Option<TagWrapper<String>>,
 }
 
 #[derive(Debug, Serialize)]
 struct ConfigRpc {
     #[serde(rename = "$value")]
     item: String,
-}
-
-#[derive(Debug, Serialize)]
-struct TargetRpc {
-    #[serde(rename = "$value")]
-    item: Datastore,
 }
 
 pub type EditConfigResponse = SimpleResponse;

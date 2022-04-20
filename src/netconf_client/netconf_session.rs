@@ -1,18 +1,10 @@
 use std::net::IpAddr;
 
-// TODO - split to pub responses, or possibly pub requests as well?
-use super::messages::{
-    CancelCommitRequest, CancelCommitResponse, CloseSessionRequest, CloseSessionResponse,
-    CommitRequest, CommitResponse, CopyConfigRequest, CopyConfigResponse, DeleteConfigRequest,
-    DeleteConfigResponse, DiscardChangesRequest, DiscardChangesResponse, EditConfigRequest,
-    EditConfigResponse, GetConfigRequest, GetConfigResponse, GetRequest, GetResponse, HelloRequest,
-    HelloResponse, KillSessionRequest, KillSessionResponse, LockRequest, LockResponse,
-    NetconfResponse, UnlockRequest, UnlockResponse,
-};
+use super::messages::*;
 
-pub use super::messages::{ConfirmedCommitParams, EditConfigParams};
+use super::messages::edit_config::EditConfigContent;
 use super::ssh_client::SshClient;
-use super::types::{Capability, Datastore, Filter, RpcReply};
+use super::types::{Capability, ConfigWaypoint, Datastore, Filter, RpcReply};
 use super::SshAuthentication;
 
 use anyhow::{bail, Result};
@@ -93,10 +85,10 @@ impl NetconfSession {
     /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.
     /// These cannot be changed during session runtime.
     /// Server capabilities are stored in the [`Self`] instance after successful invocation.
-    pub fn request_hello(&mut self) -> Result<HelloResponse> {
-        let request = HelloRequest::new(self.client_capabilities.clone());
+    pub fn request_hello(&mut self) -> Result<hello::HelloResponse> {
+        let request = hello::HelloRequest::new(self.client_capabilities.clone());
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = HelloResponse::from_netconf_rpc(response_str)?;
+        let response = hello::HelloResponse::from_netconf_rpc(response_str)?;
 
         self.session_id = Some(response.session_id);
         self.server_capabilities = Some(response.capabilities.clone());
@@ -122,10 +114,10 @@ impl NetconfSession {
         Ok(response)
     }
 
-    pub fn request_close_session(&mut self) -> Result<CloseSessionResponse> {
-        let request = CloseSessionRequest::new(self.new_message_id());
+    pub fn request_close_session(&mut self) -> Result<close_session::CloseSessionResponse> {
+        let request = close_session::CloseSessionRequest::new(self.new_message_id());
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        let response = CloseSessionResponse::from_netconf_rpc(response_str)?;
+        let response = close_session::CloseSessionResponse::from_netconf_rpc(response_str)?;
 
         if RpcReply::Ok == response.reply {
             self.ssh.disconnect()?;
@@ -134,84 +126,110 @@ impl NetconfSession {
         Ok(response)
     }
 
-    pub fn request_lock(&mut self, datastore: Datastore) -> Result<LockResponse> {
-        let request = LockRequest::new(self.new_message_id(), datastore);
+    pub fn request_lock(&mut self, datastore: Datastore) -> Result<lock::LockResponse> {
+        let request = lock::LockRequest::new(self.new_message_id(), datastore);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        LockResponse::from_netconf_rpc(response_str)
+        lock::LockResponse::from_netconf_rpc(response_str)
     }
 
-    pub fn request_unlock(&mut self, datastore: Datastore) -> Result<UnlockResponse> {
-        let request = UnlockRequest::new(self.new_message_id(), datastore);
+    pub fn request_unlock(&mut self, datastore: Datastore) -> Result<unlock::UnlockResponse> {
+        let request = unlock::UnlockRequest::new(self.new_message_id(), datastore);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        UnlockResponse::from_netconf_rpc(response_str)
+        unlock::UnlockResponse::from_netconf_rpc(response_str)
     }
 
-    pub fn request_get(&mut self, filter: Option<Filter>) -> Result<GetResponse> {
-        let request = GetRequest::new(self.new_message_id(), filter);
+    pub fn request_get(&mut self, filter: Option<Filter>) -> Result<get::GetResponse> {
+        let request = get::GetRequest::new(self.new_message_id(), filter);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        GetResponse::from_netconf_rpc(response_str)
+        get::GetResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_get_config(
         &mut self,
         source: Datastore,
         filter: Option<Filter>,
-    ) -> Result<GetConfigResponse> {
-        let request = GetConfigRequest::new(self.new_message_id(), source, filter);
+    ) -> Result<get_config::GetConfigResponse> {
+        let request = get_config::GetConfigRequest::new(self.new_message_id(), source, filter);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        GetConfigResponse::from_netconf_rpc(response_str)
+        get_config::GetConfigResponse::from_netconf_rpc(response_str)
     }
 
     // TODO - untested - possibly unfinished/incorrect (de)serialization...
-    pub fn request_edit_config(&mut self, params: EditConfigParams) -> Result<EditConfigResponse> {
-        if self.validate_capabilities
-            && params.target == Datastore::Running
-            && !self.got_server_capability(Capability::WritableRunning)
-        {
-            bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
-        };
+    pub fn request_edit_config(
+        &mut self,
+        params: edit_config::EditConfigParams,
+    ) -> Result<edit_config::EditConfigResponse> {
+        if self.validate_capabilities {
+            if params.target == Datastore::Running
+                && !self.got_server_capability(Capability::WritableRunning)
+            {
+                bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
+            };
+            if let Some(error_option) = &params.error_option {
+                if *error_option == edit_config::ErrorOption::RollbackOnError
+                    && !self.got_server_capability(Capability::RollbackOnError)
+                {
+                    bail!("Server didn't advertise :rollback-on-error capability! Cannot use this error-option.");
+                }
+            }
+            if params.test_option.is_some() && !self.got_server_capability(Capability::Validate11) {
+                bail!("Server didn't advertise :validate:1.1 capability! Cannot use test-option.");
+            }
+            if let EditConfigContent::Url(_) = &params.config {
+                // TODO - check scheme used -> getter for generic Url capability - check schemes supported by server vs the one being used by caller
+            }
+        }
 
-        let request = EditConfigRequest::new(self.new_message_id(), params);
+        let request = edit_config::EditConfigRequest::new(self.new_message_id(), params);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        EditConfigResponse::from_netconf_rpc(response_str)
+        edit_config::EditConfigResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_copy_config(
         &mut self,
-        target: Datastore,
-        source: Datastore,
-    ) -> Result<CopyConfigResponse> {
+        target: ConfigWaypoint,
+        source: ConfigWaypoint,
+    ) -> Result<copy_config::CopyConfigResponse> {
         if self.validate_capabilities
-            && target == Datastore::Running
+            && target == ConfigWaypoint::Datastore(Datastore::Running)
             && !self.got_server_capability(Capability::WritableRunning)
         {
             bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
-        };
+        }
 
-        let request = CopyConfigRequest::new(self.new_message_id(), target, source);
+        let request = copy_config::CopyConfigRequest::new(self.new_message_id(), target, source);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        CopyConfigResponse::from_netconf_rpc(response_str)
+        copy_config::CopyConfigResponse::from_netconf_rpc(response_str)
     }
 
-    pub fn request_delete_config(&mut self, target: Datastore) -> Result<DeleteConfigResponse> {
-        let request = DeleteConfigRequest::new(self.new_message_id(), target);
+    pub fn request_delete_config(
+        &mut self,
+        target: ConfigWaypoint,
+    ) -> Result<delete_config::DeleteConfigResponse> {
+        let request = delete_config::DeleteConfigRequest::new(self.new_message_id(), target);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        DeleteConfigResponse::from_netconf_rpc(response_str)
+        delete_config::DeleteConfigResponse::from_netconf_rpc(response_str)
     }
 
-    pub fn request_kill_session(&mut self, session_id: u32) -> Result<KillSessionResponse> {
-        let request = KillSessionRequest::new(self.new_message_id(), session_id);
+    pub fn request_kill_session(
+        &mut self,
+        session_id: u32,
+    ) -> Result<kill_session::KillSessionResponse> {
+        let request = kill_session::KillSessionRequest::new(self.new_message_id(), session_id);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        KillSessionResponse::from_netconf_rpc(response_str)
+        kill_session::KillSessionResponse::from_netconf_rpc(response_str)
     }
 
-    fn commit(&mut self, params: Option<ConfirmedCommitParams>) -> Result<CommitResponse> {
-        let request = CommitRequest::new(self.new_message_id(), params);
+    fn commit(
+        &mut self,
+        params: Option<commit::ConfirmedCommitParams>,
+    ) -> Result<commit::CommitResponse> {
+        let request = commit::CommitRequest::new(self.new_message_id(), params);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        CommitResponse::from_netconf_rpc(response_str)
+        commit::CommitResponse::from_netconf_rpc(response_str)
     }
 
-    pub fn request_commit(&mut self) -> Result<CommitResponse> {
+    pub fn request_commit(&mut self) -> Result<commit::CommitResponse> {
         if self.validate_capabilities && !self.got_server_capability(Capability::Candidate) {
             bail!("<commit> operation allowed only for :candidate enabled servers!");
         };
@@ -220,35 +238,45 @@ impl NetconfSession {
 
     pub fn request_confirmed_commit(
         &mut self,
-        params: ConfirmedCommitParams,
-    ) -> Result<CommitResponse> {
+        params: commit::ConfirmedCommitParams,
+    ) -> Result<commit::CommitResponse> {
         if self.validate_capabilities && !self.got_server_capability(Capability::ConfirmedCommit) {
             bail!("<commit> operation with parameters allowed only for :confirmed-commit enabled servers!");
         };
         self.commit(Some(params))
     }
 
-    pub fn request_discard_changes(&mut self) -> Result<DiscardChangesResponse> {
+    pub fn request_discard_changes(&mut self) -> Result<discard_changes::DiscardChangesResponse> {
         if self.validate_capabilities && !self.got_server_capability(Capability::Candidate) {
             bail!("<discard-changes> operation allowed only for :candidate enabled servers!");
         };
-        let request = DiscardChangesRequest::new(self.new_message_id());
+        let request = discard_changes::DiscardChangesRequest::new(self.new_message_id());
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        DiscardChangesResponse::from_netconf_rpc(response_str)
+        discard_changes::DiscardChangesResponse::from_netconf_rpc(response_str)
     }
 
     pub fn request_cancel_commit(
         &mut self,
         persist_id: Option<u32>,
-    ) -> Result<CancelCommitResponse> {
+    ) -> Result<cancel_commit::CancelCommitResponse> {
         if self.validate_capabilities && !self.got_server_capability(Capability::ConfirmedCommit) {
             bail!("<cancel-commit> operation allowed only for :confirmed-commit enabled servers!");
         };
-        let request = CancelCommitRequest::new(self.new_message_id(), persist_id);
+        let request = cancel_commit::CancelCommitRequest::new(self.new_message_id(), persist_id);
         let response_str = self.ssh.dispatch_netconf_request(&request)?;
-        CancelCommitResponse::from_netconf_rpc(response_str)
+        cancel_commit::CancelCommitResponse::from_netconf_rpc(response_str)
     }
 
     // TODO check for :candidate in <get-config>, <edit-config>, <copy-config>, and <validate>
     // TODO check for :candidate in <lock>, <unlock>
+
+    pub fn request_validate(
+        &mut self,
+        source: validate::ValidateSource,
+    ) -> Result<validate::ValidateResponse> {
+        // TODO - validate 1.0 vs 1.1 depending on client
+        let request = validate::ValidateRequest::new(self.new_message_id(), source);
+        let response_str = self.ssh.dispatch_netconf_request(&request)?;
+        validate::ValidateResponse::from_netconf_rpc(response_str)
+    }
 }

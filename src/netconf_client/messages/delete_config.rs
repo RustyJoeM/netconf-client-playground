@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::netconf_client::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
+    types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -12,7 +12,7 @@ use crate::netconf_client::{
 pub struct DeleteConfigRequest {
     pub message_id: String,
     pub xmlns: String,
-    pub target: Datastore,
+    pub target: ConfigWaypoint,
 }
 
 impl super::NetconfRequest for DeleteConfigRequest {
@@ -35,7 +35,7 @@ impl From<DeleteConfigRequest> for DeleteConfigRequestRpc {
 }
 
 impl DeleteConfigRequest {
-    pub fn new(message_id: String, target: Datastore) -> Self {
+    pub fn new(message_id: String, target: ConfigWaypoint) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
@@ -50,14 +50,14 @@ struct DeleteConfigRequestRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    #[serde(rename = "Delete-config")]
+    #[serde(rename = "delete-config")]
     delete_config: DeleteConfigRpc,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename = "Delete-config")]
+#[serde(rename = "delete-config")]
 struct DeleteConfigRpc {
-    target: TagWrapper<Datastore>,
+    target: ConfigWaypointRpc,
 }
 
 pub type DeleteConfigResponse = SimpleResponse;

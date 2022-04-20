@@ -1,12 +1,14 @@
 mod capability;
+mod config_waypoint;
 mod datastore;
 mod filter;
 mod rpc_error;
 mod rpc_reply;
 mod simple_response;
-mod url;
 
 pub use capability::Capability;
+pub use config_waypoint::ConfigWaypoint;
+pub(in crate::netconf_client) use config_waypoint::ConfigWaypointRpc;
 pub use datastore::Datastore;
 pub use filter::*;
 pub use rpc_error::*;

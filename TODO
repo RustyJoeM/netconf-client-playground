@@ -1,3 +1,12 @@
+- de-clutter numerous mod/pub use-es...
+
+- !!! tests when API stabilizes...
+
+- normalize bail!s error formatting/reporting for capability validation (at least some common macro for cap. breach + value causing it )
+
+- change String for nested items into some alias to allow smoother update to some working xml node later?
+    (get/get-config's 'data', validate's source 'config', etc.)
+
 - add NMDA operations rfc 8526 - <get-data>, <edit-data>...
 
 - add comments to operation's implementation from NETCONF RFC in regard to what the requests do etc.?

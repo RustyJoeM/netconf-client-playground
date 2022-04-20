@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::netconf_client::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
+    types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -12,8 +12,8 @@ use crate::netconf_client::{
 pub struct CopyConfigRequest {
     pub message_id: String,
     pub xmlns: String,
-    pub target: Datastore,
-    pub source: Datastore,
+    pub target: ConfigWaypoint,
+    pub source: ConfigWaypoint,
 }
 
 impl super::NetconfRequest for CopyConfigRequest {
@@ -37,7 +37,7 @@ impl From<CopyConfigRequest> for CopyConfigRequestRpc {
 }
 
 impl CopyConfigRequest {
-    pub fn new(message_id: String, target: Datastore, source: Datastore) -> Self {
+    pub fn new(message_id: String, target: ConfigWaypoint, source: ConfigWaypoint) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
@@ -60,8 +60,8 @@ struct CopyConfigRequestRpc {
 #[derive(Debug, Serialize)]
 #[serde(rename = "copy-config")]
 struct CopyConfigRpc {
-    target: TagWrapper<Datastore>,
-    source: TagWrapper<Datastore>,
+    target: ConfigWaypointRpc,
+    source: ConfigWaypointRpc,
 }
 
 pub type CopyConfigResponse = SimpleResponse;

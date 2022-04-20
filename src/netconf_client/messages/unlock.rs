@@ -5,11 +5,10 @@ use crate::netconf_client::{
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
-/// The \<lock\> request for short-lived restriction of datastore access.
+/// The \<unlock\> request for releasing the short-lived restriction of datastore access.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "UnlockRequestRpc")]
 pub struct UnlockRequest {
-    #[serde(rename = "message-id")]
     message_id: String,
     target: Datastore,
 }

@@ -5,7 +5,9 @@
 use anyhow::Result;
 
 mod netconf_client;
-use crate::netconf_client::{types::Capability, NetconfSession, SshAuthentication};
+use crate::netconf_client::{
+    types::Capability, types::Datastore, NetconfSession, SshAuthentication,
+};
 
 fn main() -> Result<()> {
     let mut session = NetconfSession::initialize(
@@ -20,46 +22,48 @@ fn main() -> Result<()> {
     // dbg!(session.request_unlock(Datastore::Running)?);
     // dbg!(session.request_get(None)?);
 
-    // use crate::netconf::types::{Filter, FilterType};
+    // use netconf_client::types::{Filter, FilterType};
     // let filter = Filter {
     //     filter_type: FilterType::Subtree,
     //     data: "<dhcp xmlns=\"http://tail-f.com/ns/example/dhcpd\"/>".to_string(),
     // };
     // // let res = session.request_get(Some(filter))?;
-    // use crate::netconf::types::Datastore;
+    // use netconf_client::types::Datastore;
     // let res = session.request_get_config(Datastore::Running, Some(filter))?;
     // dbg!(res.data()?);
 
     // dbg!(session.request_commit()?);
 
-    // use crate::netconf_client::ConfirmedCommitParams;
-    // let params = ConfirmedCommitParams {
+    // use netconf_client::messages::commit;
+    // let params = commit::ConfirmedCommitParams {
     //     confirm_timeout: Some(30),
     //     persist: Some("abra".to_string()),
     //     persist_id: Some("cadabra".to_string()),
     // };
     // dbg!(session.request_confirmed_commit(params)?);
 
-    // dbg!(session.request_discard_changes()?);
-    // dbg!(session.kill_session(11)?);
-    dbg!(session.request_close_session()?);
-
-    // use netconf::{
-    //     messages::edit_config::{EditConfigParams, EditConfigRequest},
-    //     types::Datastore,
-    // };
-    // let params = EditConfigParams {
+    // use netconf_client::messages::edit_config;
+    // let params = edit_config::EditConfigParams {
     //     target: Datastore::Running,
     //     default_operation: None,
     //     test_option: None,
     //     error_option: None,
-    //     config: "<right/>".to_string(),
+    //     // config: edit_config::EditConfigContent::Config("<right/>".to_string()),
+    //     config: edit_config::EditConfigContent::Url("https://example.com/test".to_string()),
     // };
-    // let req = EditConfigRequest::new_request_str("123".to_string(), params)?;
-    // dbg!(req);
+    // dbg!(session.request_edit_config(params)?);
 
-    // let req = GetRequest::new("123".to_string(), Some(filter));
-    // dbg!(quick_xml::se::to_string(&req));
+    // use netconf_client::messages::validate;
+    // let source = validate::ValidateSource::Datastore(Datastore::Running);
+    // dbg!(session.request_validate(source)?);
+
+    // dbg!(session.request_discard_changes()?);
+    // dbg!(session.request_kill_session(11)?);
+    dbg!(session.request_close_session()?);
+
+    // let urn = "urn:ietf:params:netconf:capability:url:1.0?scheme=http,ftp,file".to_string();
+    // let cap = Capability::from_urn(&urn)?;
+    // dbg!(&cap);
 
     Ok(())
 }
