@@ -1,32 +1,22 @@
 use std::fmt::Debug;
 
 use anyhow::{bail, Result};
-use quick_xml::{de::from_str, se::to_string};
-use serde::{Deserialize, Serialize};
+use quick_xml::{
+    de::from_str,
+    events::{BytesEnd, BytesStart, BytesText, Event},
+};
+use serde::Deserialize;
 
 use crate::netconf_client::{
-    common::{get_tag_slice, XMLNS},
-    types::{Filter, FilterRpc, RpcErrorRpc, RpcReply},
+    common::{get_tag_slice, xml_events_to_string, RpcWrapMode, XMLNS},
+    types::{Filter, RpcErrorRpc, RpcReply},
 };
 
-#[derive(Debug, Serialize, Clone)]
-#[serde(into = "GetRequestRpc")]
+#[derive(Debug, Clone)]
 pub struct GetRequest {
     pub message_id: String,
     pub xmlns: String,
     pub filter: Option<Filter>,
-}
-
-impl From<GetRequest> for GetRequestRpc {
-    fn from(request: GetRequest) -> Self {
-        GetRequestRpc {
-            message_id: request.message_id,
-            xmlns: request.xmlns,
-            get: GetRpc {
-                filter: request.filter.map(|f| f.into()),
-            },
-        }
-    }
 }
 
 impl GetRequest {
@@ -41,45 +31,17 @@ impl GetRequest {
 
 impl super::NetconfRequest for GetRequest {
     fn to_netconf_rpc(&self) -> Result<String> {
-        const TOKEN: &str = "MAGIC_TOKEN";
-        let mut filter = self.filter.clone();
+        // TODO - might move also root tag into `xml_events_to_string` if no usage has attributes?
+        let mut events = vec![Event::Start(BytesStart::borrowed(b"get", b"get".len()))];
 
-        // extract user-defined filter data
-        let filter_str: Option<String> = match &mut filter {
-            Some(f) => {
-                let res = Some(f.data.clone());
-                // reset it for automatic serialization to a TOKEN to be replaced later
-                f.data = TOKEN.to_string();
-                res
-            }
-            None => None,
-        };
-
-        // serialize RPC without filter data (if some)
-        let instance = Self::new(self.message_id.clone(), filter);
-        let mut instance_str = to_string(&instance)?;
-
-        // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)
-        if let Some(f) = filter_str {
-            instance_str = instance_str.replace(TOKEN, &f);
+        if let Some(filter) = &self.filter {
+            let filter_str = filter.to_netconf_rpc()?;
+            events.push(Event::Text(BytesText::from_escaped_str(filter_str)));
         }
-        Ok(instance_str)
+        events.push(Event::End(BytesEnd::borrowed(b"get")));
+
+        xml_events_to_string(&events, RpcWrapMode::Wrapped(&self.message_id, &self.xmlns))
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename = "rpc")]
-struct GetRequestRpc {
-    #[serde(rename = "message-id")]
-    message_id: String,
-    xmlns: String,
-    get: GetRpc,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename = "get")]
-struct GetRpc {
-    filter: Option<FilterRpc>,
 }
 
 #[derive(Debug)]

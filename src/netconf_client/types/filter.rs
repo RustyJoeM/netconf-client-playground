@@ -1,47 +1,52 @@
-use std::fmt::Display;
+use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 
-use serde::Serialize;
+use crate::netconf_client::{
+    common::{xml_events_to_string, RpcWrapMode},
+    messages::NetconfRequest,
+};
 
-#[derive(Debug, Serialize, Clone)]
-#[serde(into = "FilterRpc")]
+#[derive(Debug, Clone)]
 pub struct Filter {
-    pub filter_type: FilterType,
-    pub data: String,
+    pub value: FilterType,
+    pub namespaces: Vec<(String, String)>,
 }
 
-impl From<Filter> for FilterRpc {
-    fn from(request: Filter) -> Self {
-        FilterRpc {
-            filter: request.filter_type.to_string(),
-            data: request.data,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename = "filter")]
-pub(in crate::netconf_client) struct FilterRpc {
-    #[serde(rename = "type")]
-    filter: String,
-    #[serde(rename = "$value")]
-    data: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone)]
 pub enum FilterType {
-    Subtree,
-    /// Usable only when client supports the [`Capability::XPath`] capability. (see [RFC 6241](https://datatracker.ietf.org/doc/html/rfc6241#section-8.9), section 8.9)
-    XPath,
+    Subtree(String),
+    /// Usable only when client supports the [`Capability::XPath`] capability.
+    /// (see [RFC 6241](https://datatracker.ietf.org/doc/html/rfc6241#section-8.9), section 8.9)
+    Xpath(String),
 }
 
-// Needed because of current quick-xml inability to serialize our structure properly for enum (must be String).
-impl Display for FilterType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            FilterType::Subtree => "subtree",
-            FilterType::XPath => "xpath",
+impl NetconfRequest for Filter {
+    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+        let mut events: Vec<Event> = vec![];
+
+        let filter_tag = b"filter";
+
+        let mut elem = BytesStart::borrowed(filter_tag, filter_tag.len());
+        for (prefix, namespace) in self.namespaces.iter() {
+            elem.push_attribute((prefix.as_str(), namespace.as_str()));
+        }
+
+        match &self.value {
+            FilterType::Subtree(subtree) => {
+                elem.push_attribute(("type", "subtree"));
+                events.push(Event::Start(elem));
+                let data_tag = b"data";
+                events.push(Event::Start(BytesStart::borrowed(data_tag, data_tag.len())));
+                events.push(Event::Text(BytesText::from_escaped_str(&*subtree)));
+                events.push(Event::End(BytesEnd::borrowed(data_tag)));
+                events.push(Event::End(BytesEnd::borrowed(filter_tag)));
+            }
+            FilterType::Xpath(xpath) => {
+                elem.push_attribute(("type", "xpath"));
+                elem.push_attribute(("select", xpath.as_str()));
+                events.push(Event::Empty(elem));
+            }
         };
-        write!(f, "{}", s)
+
+        xml_events_to_string(&events, RpcWrapMode::Plain)
     }
 }

@@ -1,38 +1,25 @@
 use std::fmt::Debug;
 
 use anyhow::{bail, Result};
-use quick_xml::{de::from_str, se::to_string};
-use serde::{Deserialize, Serialize};
+use quick_xml::{
+    de::from_str,
+    events::{BytesEnd, BytesStart, BytesText, Event},
+};
+use serde::Deserialize;
 
 use crate::netconf_client::{
-    common::{get_tag_slice, XMLNS},
-    types::{Datastore, Filter, FilterRpc, RpcErrorRpc, RpcReply},
+    common::{get_tag_slice, xml_events_to_string, RpcWrapMode, XMLNS},
+    types::{Datastore, Filter, RpcErrorRpc, RpcReply},
 };
 
 use super::NetconfResponse;
 
-#[derive(Debug, Serialize, Clone)]
-#[serde(into = "GetConfigRequestRpc")]
+#[derive(Debug, Clone)]
 pub struct GetConfigRequest {
     pub message_id: String,
     pub xmlns: String,
     pub source: Datastore,
     pub filter: Option<Filter>,
-}
-
-impl From<GetConfigRequest> for GetConfigRequestRpc {
-    fn from(request: GetConfigRequest) -> Self {
-        GetConfigRequestRpc {
-            message_id: request.message_id,
-            xmlns: request.xmlns,
-            get_config: GetConfigRpc {
-                source: SourceRpc {
-                    item: request.source,
-                },
-                filter: request.filter.map(|f| f.into()),
-            },
-        }
-    }
 }
 
 impl GetConfigRequest {
@@ -47,54 +34,27 @@ impl GetConfigRequest {
 }
 
 impl super::NetconfRequest for GetConfigRequest {
-    fn to_netconf_rpc(&self) -> Result<std::string::String, anyhow::Error> {
-        const TOKEN: &str = "MAGIC_TOKEN";
-        let mut filter = self.filter.clone();
+    fn to_netconf_rpc(&self) -> Result<String> {
+        let source_str = self.source.to_string();
 
-        // extract user-defined filter data
-        let filter_str: Option<String> = match &mut filter {
-            Some(f) => {
-                let res = Some(f.data.clone());
-                // reset it for automatic serialization to a TOKEN to be replaced later
-                f.data = TOKEN.to_string();
-                res
-            }
-            None => None,
-        };
+        let mut events = vec![
+            Event::Start(BytesStart::borrowed(b"get-config", b"get-config".len())),
+            Event::Start(BytesStart::borrowed(b"source", b"source".len())),
+            Event::Empty(BytesStart::borrowed(
+                source_str.as_bytes(),
+                source_str.len(),
+            )),
+            Event::End(BytesEnd::borrowed(b"source")),
+        ];
 
-        // serialize RPC without filter data (if some)
-        let instance = Self::new(self.message_id.clone(), self.source.clone(), filter);
-        let mut instance_str = to_string(&instance)?;
-
-        // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)
-        if let Some(f) = filter_str {
-            instance_str = instance_str.replace(TOKEN, &f);
+        if let Some(filter) = &self.filter {
+            let filter_str = filter.to_netconf_rpc()?;
+            events.push(Event::Text(BytesText::from_escaped_str(filter_str)));
         }
-        Ok(instance_str)
+        events.push(Event::End(BytesEnd::borrowed(b"get-config")));
+
+        xml_events_to_string(&events, RpcWrapMode::Wrapped(&self.message_id, &self.xmlns))
     }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename = "rpc")]
-struct GetConfigRequestRpc {
-    #[serde(rename = "message-id")]
-    message_id: String,
-    xmlns: String,
-    #[serde(rename = "get-config")]
-    get_config: GetConfigRpc,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename = "get-config")]
-struct GetConfigRpc {
-    source: SourceRpc,
-    filter: Option<FilterRpc>,
-}
-
-#[derive(Debug, Serialize)]
-struct SourceRpc {
-    #[serde(rename = "$value")]
-    item: Datastore,
 }
 
 #[derive(Debug)]

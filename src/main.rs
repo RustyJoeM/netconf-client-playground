@@ -5,9 +5,7 @@
 use anyhow::Result;
 
 mod netconf_client;
-use crate::netconf_client::{
-    types::Capability, types::Datastore, NetconfSession, SshAuthentication,
-};
+use crate::netconf_client::{types::Capability, NetconfSession, SshAuthentication};
 
 fn main() -> Result<()> {
     let mut session = NetconfSession::initialize(
@@ -22,12 +20,20 @@ fn main() -> Result<()> {
     // dbg!(session.request_unlock(Datastore::Running)?);
     // dbg!(session.request_get(None)?);
 
-    // use netconf_client::types::{Filter, FilterType};
+    // use netconf_client::types::{Datastore, Filter, FilterType};
     // let filter = Filter {
-    //     filter_type: FilterType::Subtree,
-    //     data: "<dhcp xmlns=\"http://tail-f.com/ns/example/dhcpd\"/>".to_string(),
+    //     // value: FilterType::Subtree(
+    //     //     "<dhcp xmlns=\"http://tail-f.com/ns/example/dhcpd\"/>".to_string(),
+    //     // ),
+    //     value: FilterType::Xpath("/dhcp/something[a = 123]".to_string()),
+    //     namespaces: vec![
+    //         // ("xmlns:first".to_string(), "todo".to_string()),
+    //         ("xmlns".to_string(), "bbbbb".to_string()),
+    //     ],
     // };
-    // // let res = session.request_get(Some(filter))?;
+    // // dbg!(&filter.to_netconf_rpc()?);
+    // dbg!(session.request_get_config(Datastore::Running, Some(filter))?);
+
     // use netconf_client::types::Datastore;
     // let res = session.request_get_config(Datastore::Running, Some(filter))?;
     // dbg!(res.data()?);
