@@ -1,7 +1,7 @@
 use anyhow::{bail, Result};
 use serde::Deserialize;
 
-use crate::netconf_client::{
+use crate::{
     messages::NetconfResponse,
     types::{RpcError, RpcReply},
 };

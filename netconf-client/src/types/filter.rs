@@ -1,6 +1,6 @@
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 
-use crate::netconf_client::{
+use crate::{
     common::{xml_events_to_string, RpcWrapMode},
     messages::NetconfRequest,
 };

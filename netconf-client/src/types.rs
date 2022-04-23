@@ -8,7 +8,7 @@ mod simple_response;
 
 pub use capability::Capability;
 pub use config_waypoint::ConfigWaypoint;
-pub(in crate::netconf_client) use config_waypoint::ConfigWaypointRpc;
+pub(in crate) use config_waypoint::ConfigWaypointRpc;
 pub use datastore::Datastore;
 pub use filter::*;
 pub use rpc_error::*;

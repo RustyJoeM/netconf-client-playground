@@ -1,16 +1,6 @@
-[package]
-name = "netconf-client-rs"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-anyhow="1.0.56"
-# rayon = "1.5.1"
-# rustyline = "9.1.2"
-# rustyline-derive = "0.6.0"
-quick-xml = { version = "0.22.0", features = ["serialize"] }
-serde= { version = "1.0.136", features = ["derive"]}
-ssh2 = "0.9.3"
-# tokio = "1.17.0"
+members = [
+    "netconf-client",
+    "netconf-cli"
+]

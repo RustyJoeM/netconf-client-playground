@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::netconf_client::{common::XMLNS, types::SimpleResponse};
+use crate::{common::XMLNS, types::SimpleResponse};
 
 use super::NetconfRequest;
 

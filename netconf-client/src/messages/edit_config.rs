@@ -4,7 +4,7 @@ use anyhow::Result;
 use quick_xml::se::to_string;
 use serde::Serialize;
 
-use crate::netconf_client::{
+use crate::{
     common::XMLNS,
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };

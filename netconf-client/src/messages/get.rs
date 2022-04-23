@@ -7,7 +7,7 @@ use quick_xml::{
 };
 use serde::Deserialize;
 
-use crate::netconf_client::{
+use crate::{
     common::{get_tag_slice, xml_events_to_string, RpcWrapMode, XMLNS},
     types::{Filter, RpcErrorRpc, RpcReply},
 };

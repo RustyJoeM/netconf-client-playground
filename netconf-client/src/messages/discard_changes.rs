@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use serde::Serialize;
 
-use crate::netconf_client::{common::XMLNS, types::SimpleResponse};
+use crate::{common::XMLNS, types::SimpleResponse};
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "DiscardChangesRequestRpc")]
