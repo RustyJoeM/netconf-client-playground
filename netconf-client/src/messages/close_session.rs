@@ -8,8 +8,8 @@ use super::NetconfRequest;
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "CloseSessionRequestRpc")]
 pub struct CloseSessionRequest {
-    message_id: String,
-    xmlns: String,
+    pub message_id: String,
+    pub xmlns: String,
 }
 
 impl NetconfRequest for CloseSessionRequest {

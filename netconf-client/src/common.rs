@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 /// Find the outermost tag with specified name,
 /// and return the string slice covering it and all of its contents.
-pub fn get_tag_slice<'i>(input: &'i str, tag: &str) -> Result<&'i str> {
+pub(crate) fn get_tag_slice<'i>(input: &'i str, tag: &str) -> Result<&'i str> {
     let start_index = if let Some(index) = input.find(&format!("<{}", tag)) {
         index
     } else {
@@ -29,12 +29,12 @@ pub fn get_tag_slice<'i>(input: &'i str, tag: &str) -> Result<&'i str> {
     Ok(&input[start_index..stop_index])
 }
 
-pub enum RpcWrapMode<'a> {
+pub(crate) enum RpcWrapMode<'a> {
     Wrapped(&'a str, &'a str),
     Plain,
 }
 
-pub fn xml_events_to_string(events: &[Event], wrap: RpcWrapMode) -> Result<String> {
+pub(crate) fn xml_events_to_string(events: &[Event], wrap: RpcWrapMode) -> Result<String> {
     let mut head_elem = BytesStart::borrowed(b"rpc", b"rpc".len());
     if let RpcWrapMode::Wrapped(message_id, xmlns) = wrap {
         head_elem.push_attribute(("message-id", message_id));

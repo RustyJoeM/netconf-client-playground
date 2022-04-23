@@ -51,6 +51,9 @@ impl NetconfSession {
 
     /// Establish connection to target server.
     pub fn connect(&mut self) -> Result<()> {
+        if self.session_id.is_some() {
+            bail!("Already connected to server!");
+        }
         self.ssh.connect()
     }
 
