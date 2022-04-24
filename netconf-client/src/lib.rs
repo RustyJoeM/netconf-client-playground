@@ -1,6 +1,6 @@
 mod common;
 
-/// All the data common types used by multiple various requests.
+/// Common data types and structures used in manipulation with NETCONF requests & responses.
 pub mod types;
 
 /// All the requests grouped into sub-modules by NETCONF operation.
