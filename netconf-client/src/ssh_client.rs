@@ -16,6 +16,7 @@ const MESSAGE_SEPARATOR: &str = "]]>]]>";
 const SSH_TIMEOUT: u32 = 5000;
 
 /// Type of authentication used for SSH connection.
+#[derive(Debug)]
 pub enum SshAuthentication {
     /// Plain old username & password access. Please note plain-text data kept in memory during runtime.
     UserPassword(String, String),
@@ -39,6 +40,10 @@ impl SshClient {
             auth,
             channel: None,
         }
+    }
+
+    pub fn target_string(&self) -> String {
+        format!("{}:{}", self.address, self.port)
     }
 
     /// Connect to target NETCONF server - open the SSH session via TCP stream and authenticate.
@@ -127,7 +132,6 @@ impl SshClient {
 
 impl Drop for SshClient {
     fn drop(&mut self) {
-        dbg!("dropping SSH");
         if self.channel.is_some() {
             if let Result::Err(err) = self.disconnect() {
                 println!("SSH disconnect error: {}", err);

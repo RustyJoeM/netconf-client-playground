@@ -24,3 +24,5 @@
     - dump RPC for various operations
     - live REPL mode (async CLI?)
     - GUI (distant future, if at all?)
+
+- NetconfSession - impl Drop & close-session request inside?

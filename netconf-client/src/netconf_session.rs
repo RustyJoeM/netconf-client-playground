@@ -39,6 +39,14 @@ impl NetconfSession {
         }
     }
 
+    pub fn target_string(&self) -> String {
+        self.ssh.target_string()
+    }
+
+    pub fn session_id(&self) -> Option<u32> {
+        self.session_id
+    }
+
     /// Set whether to perform server capabilities check before dispatching the actual RPCs to server.
     ///
     /// Upon initial \<hello\> exchange when session is created, capabilities advertised by NETCONF server are stored internally.

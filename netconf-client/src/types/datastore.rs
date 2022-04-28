@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::Serialize;
 
 #[derive(Debug, PartialEq, Serialize, Clone)]
@@ -16,5 +18,17 @@ impl std::fmt::Display for Datastore {
             Datastore::Other(other) => other,
         };
         f.write_str(ptr)
+    }
+}
+
+impl FromStr for Datastore {
+    type Err = std::io::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "running" => Datastore::Running,
+            "candidate" => Datastore::Candidate,
+            s => Datastore::Other(s.to_string()),
+        })
     }
 }

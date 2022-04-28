@@ -6,5 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow="1.0.56"
+anyhow="1"
+clap = { version = "3", features = ["derive"] }
+# rustyline-async = "0.2"
+rustyline = "9"
+# tokio = { version = "1", features = ["full"] }
 netconf-client = { path = "../netconf-client" }
