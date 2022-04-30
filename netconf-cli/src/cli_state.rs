@@ -2,8 +2,8 @@ use crate::clap_args::Command;
 use colored::{Color, Colorize};
 use netconf_client::{
     messages::{
-        close_session::CloseSessionRequest, lock::LockRequest, unlock::UnlockRequest, FullResponse,
-        NetconfRequest, NetconfResponse,
+        close_session::CloseSessionRequest, hello::HelloRequest, lock::LockRequest,
+        unlock::UnlockRequest, FullResponse, NetconfRequest, NetconfResponse,
     },
     types::{Capability, RpcReply},
     NetconfSession, SshAuthentication,
@@ -21,9 +21,16 @@ pub struct CliState {
     prompt: String,
 }
 
+const NO_SESSION_ERROR_STR: &str = "No NETCONF session opened!";
+
 impl CliState {
     pub fn new() -> Self {
         let mut editor = Editor::<()>::new();
+        // let helper = RustyLineHelper {
+        //     prompt: "".to_string(),
+        // };
+        // editor.set_helper(Some(helper));
+
         if editor.load_history(HISTORY_FILE).is_err() {
             println!("No previous history.");
         }
@@ -46,17 +53,19 @@ impl CliState {
             Some(session) => {
                 let session_id = session.session_id().unwrap_or(0);
                 format!(
-                    "--> NETCONF(session-id:{}@{})$ ",
+                    "netconf-cli(session-id:{}@{})$ ",
                     session_id,
                     session.target_string()
                 )
             }
-            None => "--> NETCONF$ ".to_string(),
+            None => "netconf-cli$ ".to_string(),
         };
     }
 
     pub fn read_line(&mut self) -> Result<String, ReadlineError> {
-        let r = self.editor.readline(&self.prompt.red())?;
+        // print_colored("", termcolor::Color::Magenta);
+        let r = self.editor.readline(&self.prompt)?;
+        // print_colored("", termcolor::Color::White);
         Ok(r)
     }
 
@@ -86,7 +95,8 @@ impl CliState {
         }
     }
 
-    pub fn handle_command(&mut self, command: Command) -> anyhow::Result<()> {
+    pub fn handle_command(&mut self, command: &Command) -> anyhow::Result<()> {
+        // try non-NETCONF (and NETCONF init) commands first:
         match command {
             Command::HistoryClear {} => {
                 self.editor.clear_history();
@@ -97,17 +107,35 @@ impl CliState {
                 user,
                 password,
             } => {
-                let auth = SshAuthentication::UserPassword(user, password);
+                let auth = SshAuthentication::UserPassword(user.to_owned(), password.to_owned());
                 // TODO - client capabilities;
                 let client_capabilities = vec![Capability::Base];
                 // TODO - dump requests/responses of nested initialize block!
-                let session = NetconfSession::initialize(address, port, auth, client_capabilities)?;
+                let mut session =
+                    NetconfSession::new(*address, *port, auth, client_capabilities.clone());
+                session.connect()?;
+                println!("Connected to target NETCONF server.");
+
+                let request = HelloRequest::new(client_capabilities);
+                Self::log_request(&request);
+
+                let response = session.dispatch_request(request)?;
+                Self::log_response(&response);
+
                 self.set_session(Some(session));
             }
+            _ => {}
+        }
+
+        if self.session.is_none() {
+            anyhow::bail!(NO_SESSION_ERROR_STR);
+        }
+
+        match command {
             Command::Lock { target } => {
                 if let Some(session) = &mut self.session {
                     let message_id = session.new_message_id();
-                    let request = LockRequest::new(message_id, target);
+                    let request = LockRequest::new(message_id, target.clone());
                     Self::log_request(&request);
 
                     let response = session.dispatch_request(request)?;
@@ -117,7 +145,7 @@ impl CliState {
             Command::Unlock { target } => {
                 if let Some(session) = &mut self.session {
                     let message_id = session.new_message_id();
-                    let request = UnlockRequest::new(message_id, target);
+                    let request = UnlockRequest::new(message_id, target.clone());
                     Self::log_request(&request);
 
                     let response = session.dispatch_request(request)?;
@@ -137,6 +165,7 @@ impl CliState {
                     }
                 }
             }
+            _ => {}
         }
         Ok(())
     }
@@ -151,9 +180,11 @@ impl Drop for CliState {
     }
 }
 
-// fn print_colored(s: &str, color: Color) -> anyhow::Result<()> {
-//     let mut stdout = StandardStream::stdout(ColorChoice::Always);
-//     stdout.set_color(ColorSpec::new().set_fg(Some(color)))?;
+// use std::io::Write;
+// use termcolor::WriteColor;
+// fn print_colored(s: &str, color: termcolor::Color) -> anyhow::Result<()> {
+//     let mut stdout = termcolor::StandardStream::stdout(termcolor::ColorChoice::Always);
+//     stdout.set_color(termcolor::ColorSpec::new().set_fg(Some(color)))?;
 //     writeln!(&mut stdout, "{}", s);
 //     Ok(())
 // }

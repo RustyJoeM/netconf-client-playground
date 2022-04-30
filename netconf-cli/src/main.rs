@@ -3,11 +3,14 @@
 // #![deny(missing_doc_code_examples)]
 
 mod clap_args;
+// mod rustyline_helper;
 
 use anyhow::Result;
 use clap::StructOpt;
 use cli_state::CliState;
 use rustyline::error::ReadlineError;
+
+use colored::Colorize;
 
 mod cli_state;
 
@@ -23,12 +26,12 @@ fn main() -> Result<()> {
                 cli_state.editor.add_history_entry(line.as_str());
                 // println!("{}{}", prompt_str, line);
                 match clap_args::Args::try_parse_from(line.split_whitespace()) {
-                    Ok(matches) => {
-                        cli_state.handle_command(matches.command)?;
-                    }
+                    Ok(matches) => match cli_state.handle_command(&matches.command) {
+                        Ok(_) => {}
+                        Err(err) => println!("{}", err.to_string().trim().yellow()),
+                    },
                     Err(err) => {
                         // println!("{:?}", err.kind());
-                        // dbg!(&err);
                         println!("{}", err.to_string().trim());
 
                         // let kind = err.kind().to_string();
