@@ -15,6 +15,8 @@ pub struct CommitRequest {
 }
 
 impl super::NetconfRequest for CommitRequest {
+    type Response = CommitResponse;
+
     fn to_netconf_rpc(&self) -> anyhow::Result<String> {
         let res = match &self.params {
             Some(params) => quick_xml::se::to_string(&ConfirmedCommitRequestRpc {

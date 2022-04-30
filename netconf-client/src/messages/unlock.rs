@@ -20,6 +20,8 @@ impl UnlockRequest {
 }
 
 impl super::NetconfRequest for UnlockRequest {
+    type Response = UnlockResponse;
+
     fn to_netconf_rpc(&self) -> anyhow::Result<String> {
         let res = quick_xml::se::to_string(self)?;
         Ok(res)

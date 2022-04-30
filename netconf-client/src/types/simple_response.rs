@@ -52,11 +52,15 @@ impl TryFrom<SimpleResponseRpc> for SimpleResponse {
 }
 
 impl NetconfResponse for SimpleResponse {
-    fn from_netconf_rpc(s: String) -> Result<Self>
+    fn from_netconf_rpc(s: &str) -> Result<Self>
     where
         Self: Sized,
     {
-        let res: Self = quick_xml::de::from_str(&s)?;
+        let res: Self = quick_xml::de::from_str(s)?;
         Ok(res)
+    }
+
+    fn succeeded(&self) -> bool {
+        self.reply == RpcReply::Ok
     }
 }

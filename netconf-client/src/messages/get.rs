@@ -12,6 +12,8 @@ use crate::{
     types::{Filter, RpcErrorRpc, RpcReply},
 };
 
+use super::FullResponse;
+
 #[derive(Debug, Clone)]
 pub struct GetRequest {
     pub message_id: String,
@@ -30,6 +32,8 @@ impl GetRequest {
 }
 
 impl super::NetconfRequest for GetRequest {
+    type Response = GetResponse;
+
     fn to_netconf_rpc(&self) -> Result<String> {
         // TODO - might move also root tag into `xml_events_to_string` if no usage has attributes?
         let mut events = vec![Event::Start(BytesStart::borrowed(b"get", b"get".len()))];
@@ -46,7 +50,6 @@ impl super::NetconfRequest for GetRequest {
 
 #[derive(Debug)]
 pub struct GetResponse {
-    full_dump: String,
     pub message_id: String,
     pub xmlns: String,
     pub reply: RpcReply,
@@ -61,21 +64,21 @@ struct GetResponseRpc {
     rpc_error: Option<RpcErrorRpc>,
 }
 
-impl GetResponse {
+impl FullResponse<GetResponse> {
     pub fn data(&self) -> Result<&str> {
-        match self.reply {
-            RpcReply::Ok => get_tag_slice(&self.full_dump, "data"),
+        match self.typed.reply {
+            RpcReply::Ok => get_tag_slice(&self.dump, "data"),
             RpcReply::Error(_) => bail!("No data in error reply"),
         }
     }
 }
 
 impl super::NetconfResponse for GetResponse {
-    fn from_netconf_rpc(s: String) -> Result<Self>
+    fn from_netconf_rpc(s: &str) -> Result<Self>
     where
         Self: Sized,
     {
-        let rpc: GetResponseRpc = from_str(&s)?;
+        let rpc: GetResponseRpc = from_str(s)?;
         let message_id = rpc.message_id;
         let xmlns = rpc.xmlns;
         let reply = match rpc.rpc_error {
@@ -83,7 +86,6 @@ impl super::NetconfResponse for GetResponse {
             Some(err) => RpcReply::Error(err.into()),
         };
         Ok(Self {
-            full_dump: s,
             message_id,
             xmlns,
             reply,

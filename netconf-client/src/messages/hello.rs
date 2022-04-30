@@ -22,6 +22,8 @@ impl HelloRequest {
 }
 
 impl super::NetconfRequest for HelloRequest {
+    type Response = HelloResponse;
+
     fn to_netconf_rpc(&self) -> anyhow::Result<String> {
         let res = quick_xml::se::to_string(self)?;
         Ok(res)
@@ -96,11 +98,11 @@ impl From<HelloResponseRpc> for HelloResponse {
 }
 
 impl super::NetconfResponse for HelloResponse {
-    fn from_netconf_rpc(s: String) -> anyhow::Result<Self>
+    fn from_netconf_rpc(s: &str) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        let res = quick_xml::de::from_str(&s)?;
+        let res = quick_xml::de::from_str(s)?;
         Ok(res)
     }
 }

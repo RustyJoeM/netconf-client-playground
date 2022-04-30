@@ -12,7 +12,7 @@ use crate::{
     types::{Datastore, Filter, RpcErrorRpc, RpcReply},
 };
 
-use super::NetconfResponse;
+use super::{FullResponse, NetconfResponse};
 
 #[derive(Debug, Clone)]
 pub struct GetConfigRequest {
@@ -34,6 +34,8 @@ impl GetConfigRequest {
 }
 
 impl super::NetconfRequest for GetConfigRequest {
+    type Response = GetConfigResponse;
+
     fn to_netconf_rpc(&self) -> Result<String> {
         let source_str = self.source.to_string();
 
@@ -59,7 +61,6 @@ impl super::NetconfRequest for GetConfigRequest {
 
 #[derive(Debug)]
 pub struct GetConfigResponse {
-    full_dump: String,
     pub message_id: String,
     pub xmlns: String,
     pub reply: RpcReply,
@@ -75,11 +76,11 @@ struct GetConfigResponseRpc {
 }
 
 impl NetconfResponse for GetConfigResponse {
-    fn from_netconf_rpc(s: String) -> Result<Self>
+    fn from_netconf_rpc(s: &str) -> Result<Self>
     where
         Self: Sized,
     {
-        let rpc: GetConfigResponseRpc = from_str(&s)?;
+        let rpc: GetConfigResponseRpc = from_str(s)?;
         let message_id = rpc.message_id;
         let xmlns = rpc.xmlns;
         let reply = match rpc.rpc_error {
@@ -87,7 +88,6 @@ impl NetconfResponse for GetConfigResponse {
             Some(err) => RpcReply::Error(err.into()),
         };
         Ok(Self {
-            full_dump: s,
             message_id,
             xmlns,
             reply,
@@ -95,10 +95,10 @@ impl NetconfResponse for GetConfigResponse {
     }
 }
 
-impl GetConfigResponse {
+impl FullResponse<GetConfigResponse> {
     pub fn data(&self) -> Result<&str> {
-        match self.reply {
-            RpcReply::Ok => get_tag_slice(&self.full_dump, "data"),
+        match self.typed.reply {
+            RpcReply::Ok => get_tag_slice(&self.dump, "data"),
             RpcReply::Error(_) => bail!("No data in error reply"),
         }
     }

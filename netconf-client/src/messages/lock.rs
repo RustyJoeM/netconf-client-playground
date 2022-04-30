@@ -20,6 +20,8 @@ impl LockRequest {
 }
 
 impl super::NetconfRequest for LockRequest {
+    type Response = LockResponse;
+
     fn to_netconf_rpc(&self) -> anyhow::Result<String> {
         let res = quick_xml::se::to_string(self)?;
         Ok(res)

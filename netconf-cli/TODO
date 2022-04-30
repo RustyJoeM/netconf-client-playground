@@ -1,0 +1,2 @@
+- update helps for subcommands not to include binary name
+    (maybe global error parser/transformer to save on annotations/implementation?)

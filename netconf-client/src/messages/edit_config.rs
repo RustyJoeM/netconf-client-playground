@@ -105,6 +105,8 @@ impl EditConfigRequest {
 }
 
 impl super::NetconfRequest for EditConfigRequest {
+    type Response = EditConfigResponse;
+
     fn to_netconf_rpc(&self) -> Result<std::string::String, anyhow::Error> {
         const TOKEN: &str = "MAGIC_TOKEN";
         let mut params = self.params.clone();
