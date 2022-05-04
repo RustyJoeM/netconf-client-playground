@@ -5,6 +5,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
+use super::NetconfRequest;
+
 /// The \<lock\> request for short-lived restriction of datastore access.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "LockRequestRpc")]
@@ -19,13 +21,8 @@ impl LockRequest {
     }
 }
 
-impl super::NetconfRequest for LockRequest {
+impl NetconfRequest for LockRequest {
     type Response = LockResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(self)?;
-        Ok(res)
-    }
 }
 
 /// Private representation of \<lock\> RPC used for serialization.

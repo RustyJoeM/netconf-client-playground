@@ -7,6 +7,8 @@ use crate::{
     types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
 };
 
+use super::NetconfRequest;
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "DeleteConfigRequestRpc")]
 pub struct DeleteConfigRequest {
@@ -15,13 +17,8 @@ pub struct DeleteConfigRequest {
     pub target: ConfigWaypoint,
 }
 
-impl super::NetconfRequest for DeleteConfigRequest {
+impl NetconfRequest for DeleteConfigRequest {
     type Response = DeleteConfigResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(&self)?;
-        Ok(res)
-    }
 }
 
 impl From<DeleteConfigRequest> for DeleteConfigRequestRpc {

@@ -9,6 +9,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
+use super::{NetconfRequest, ToPrettyXml, ToRawXml};
+
 /// TODO - operation for \<edit-config\> elements, but not used due to nested generic XML here...
 pub enum Operation {
     Merge,
@@ -40,8 +42,7 @@ pub enum ErrorOption {
     RollbackOnError,
 }
 
-#[derive(Debug, Serialize, Clone)]
-#[serde(into = "EditConfigRequestRpc")]
+#[derive(Debug, Clone)]
 pub struct EditConfigRequest {
     pub message_id: String,
     pub xmlns: String,
@@ -104,10 +105,8 @@ impl EditConfigRequest {
     }
 }
 
-impl super::NetconfRequest for EditConfigRequest {
-    type Response = EditConfigResponse;
-
-    fn to_netconf_rpc(&self) -> Result<std::string::String, anyhow::Error> {
+impl ToRawXml for EditConfigRequest {
+    fn to_raw_xml(&self) -> Result<std::string::String, anyhow::Error> {
         const TOKEN: &str = "MAGIC_TOKEN";
         let mut params = self.params.clone();
 
@@ -121,6 +120,7 @@ impl super::NetconfRequest for EditConfigRequest {
 
         // serialize RPC without <config> / <url> data
         let instance = Self::new(self.message_id.clone(), params);
+        let instance: EditConfigRequestRpc = instance.into();
         let mut instance_str = to_string(&instance)?;
         // replace back the original filter data (auto would have escaped tags to html &lt; / &gt;)
         let s = match &config_backup {
@@ -130,6 +130,12 @@ impl super::NetconfRequest for EditConfigRequest {
         instance_str = instance_str.replace(TOKEN, s);
         Ok(instance_str)
     }
+}
+
+impl ToPrettyXml for EditConfigRequest {}
+
+impl NetconfRequest for EditConfigRequest {
+    type Response = EditConfigResponse;
 }
 
 #[derive(Debug, Serialize)]

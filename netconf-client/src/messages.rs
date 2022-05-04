@@ -16,31 +16,49 @@ pub mod validate;
 use anyhow::Result;
 use std::fmt::Debug;
 
-pub trait NetconfRequest {
-    type Response: NetconfResponse + Debug;
+pub trait ToRawXml {
+    fn to_raw_xml(&self) -> Result<String>;
+}
 
-    fn to_netconf_rpc(&self) -> Result<String>;
-
-    fn prettified_rpc(&self) -> Result<String> {
-        let raw_rpc = self.to_netconf_rpc()?;
-        prettified_rpc(&raw_rpc)
+impl<T> ToRawXml for T
+where
+    T: serde::Serialize,
+{
+    fn to_raw_xml(&self) -> Result<String> {
+        let raw_xml = quick_xml::se::to_string(&self)?;
+        Ok(raw_xml)
     }
 }
 
+pub trait ToPrettyXml: ToRawXml {
+    fn to_pretty_xml(&self) -> Result<String> {
+        let raw_rpc = self.to_raw_xml()?;
+        raw_to_pretty_xml(&raw_rpc)
+    }
+}
+
+impl<T> ToPrettyXml for T where T: serde::Serialize {}
+
+pub trait NetconfRequest: ToPrettyXml + Debug {
+    type Response: NetconfResponse;
+}
+
 #[derive(Debug)]
-pub struct FullResponse<R: NetconfResponse + Debug> {
+pub struct FullResponse<R: NetconfResponse> {
     pub typed: R,
     pub dump: String,
 }
 
-impl<R: NetconfResponse + Debug> FullResponse<R> {
-    pub fn prettified_rpc(&self) -> Result<String> {
-        let pretty = prettified_rpc(&self.dump)?;
-        Ok(pretty)
+impl<R: NetconfResponse> ToRawXml for FullResponse<R> {
+    // TODO - Cow?
+    fn to_raw_xml(&self) -> Result<String> {
+        Ok(self.dump.clone())
     }
 }
 
-pub trait NetconfResponse {
+impl<R: NetconfResponse> ToPrettyXml for FullResponse<R> {}
+
+pub trait NetconfResponse: Debug {
     fn from_netconf_rpc(s: &str) -> Result<Self>
     where
         Self: Sized;
@@ -50,7 +68,7 @@ pub trait NetconfResponse {
     }
 }
 
-fn prettified_rpc(rpc_str: &str) -> Result<String> {
+pub fn raw_to_pretty_xml(rpc_str: &str) -> Result<String> {
     let mut reader = quick_xml::Reader::from_str(rpc_str);
     reader.trim_text(true);
 

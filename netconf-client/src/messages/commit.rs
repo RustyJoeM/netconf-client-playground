@@ -7,6 +7,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, EmptyStruct, SimpleResponse},
 };
 
+use super::{NetconfRequest, ToPrettyXml, ToRawXml};
+
 #[derive(Debug, Clone)]
 pub struct CommitRequest {
     pub message_id: String,
@@ -14,10 +16,8 @@ pub struct CommitRequest {
     pub params: Option<ConfirmedCommitParams>,
 }
 
-impl super::NetconfRequest for CommitRequest {
-    type Response = CommitResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+impl ToRawXml for CommitRequest {
+    fn to_raw_xml(&self) -> anyhow::Result<String> {
         let res = match &self.params {
             Some(params) => quick_xml::se::to_string(&ConfirmedCommitRequestRpc {
                 message_id: self.message_id.clone(),
@@ -38,6 +38,12 @@ impl super::NetconfRequest for CommitRequest {
 
         Ok(res)
     }
+}
+
+impl ToPrettyXml for CommitRequest {}
+
+impl NetconfRequest for CommitRequest {
+    type Response = CommitResponse;
 }
 
 #[derive(Debug, Clone)]

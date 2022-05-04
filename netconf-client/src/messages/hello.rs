@@ -5,6 +5,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, Capability},
 };
 
+use super::NetconfRequest;
+
 /// Client \<hello\> request to be sent to NETCONF server when initiating the connection.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "HelloRequestRpc")]
@@ -21,13 +23,8 @@ impl HelloRequest {
     }
 }
 
-impl super::NetconfRequest for HelloRequest {
+impl NetconfRequest for HelloRequest {
     type Response = HelloResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(self)?;
-        Ok(res)
-    }
 }
 
 /// Private representation for serialization of \<hello\> request.

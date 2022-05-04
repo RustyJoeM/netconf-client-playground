@@ -1,6 +1,9 @@
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 
-use crate::common::{xml_events_to_string, RpcWrapMode};
+use crate::{
+    common::{xml_events_to_string, RpcWrapMode},
+    messages::ToRawXml,
+};
 
 #[derive(Debug, Clone)]
 pub struct Filter {
@@ -16,11 +19,11 @@ pub enum FilterType {
     Xpath(String),
 }
 
-impl Filter {
+impl ToRawXml for Filter {
     /// Is NOT a NetconfRequest trait impl!
     /// As this field is manually serialized due to cumbersome structure
     /// that current quick_xml cannot handle easily with derives...
-    pub fn to_netconf_rpc(&self) -> anyhow::Result<String> {
+    fn to_raw_xml(&self) -> anyhow::Result<String> {
         let mut events: Vec<Event> = vec![];
 
         let filter_tag = b"filter";

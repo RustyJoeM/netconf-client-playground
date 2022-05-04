@@ -7,6 +7,8 @@ use crate::{
     types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
 };
 
+use super::NetconfRequest;
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "CopyConfigRequestRpc")]
 pub struct CopyConfigRequest {
@@ -16,13 +18,8 @@ pub struct CopyConfigRequest {
     pub source: ConfigWaypoint,
 }
 
-impl super::NetconfRequest for CopyConfigRequest {
+impl NetconfRequest for CopyConfigRequest {
     type Response = CopyConfigResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(&self)?;
-        Ok(res)
-    }
 }
 
 impl From<CopyConfigRequest> for CopyConfigRequestRpc {

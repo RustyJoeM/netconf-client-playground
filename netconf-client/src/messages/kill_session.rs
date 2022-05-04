@@ -5,6 +5,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, SimpleResponse},
 };
 
+use super::NetconfRequest;
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "KillSessionRequestRpc")]
 pub struct KillSessionRequest {
@@ -13,13 +15,8 @@ pub struct KillSessionRequest {
     pub session_id: u32,
 }
 
-impl super::NetconfRequest for KillSessionRequest {
+impl NetconfRequest for KillSessionRequest {
     type Response = KillSessionResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(&self)?;
-        Ok(res)
-    }
 }
 
 impl KillSessionRequest {

@@ -21,7 +21,7 @@
 //         ("xmlns".to_string(), "bbbbb".to_string()),
 //     ],
 // };
-// // dbg!(&filter.to_netconf_rpc()?);
+// // dbg!(&filter.to_raw_xml()?);
 // dbg!(session.request_get_config(Datastore::Running, Some(filter))?);
 
 // use netconf_client::types::Datastore;

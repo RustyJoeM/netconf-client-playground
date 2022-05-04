@@ -5,6 +5,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
+use super::NetconfRequest;
+
 #[derive(Debug, Clone)]
 pub enum ValidateSource {
     Datastore(Datastore),
@@ -25,13 +27,8 @@ impl ValidateRequest {
     }
 }
 
-impl super::NetconfRequest for ValidateRequest {
+impl NetconfRequest for ValidateRequest {
     type Response = ValidateResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(self)?;
-        Ok(res)
-    }
 }
 
 #[derive(Debug, Serialize)]

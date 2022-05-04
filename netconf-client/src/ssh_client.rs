@@ -90,7 +90,7 @@ impl SshClient {
     /// Returns the String containing whole reponse received from server up to & excluding the NETCONF message separator.
     pub fn dispatch_netconf_request(&mut self, request: &impl NetconfRequest) -> Result<String> {
         if self.channel.is_some() {
-            let cmd = request.to_netconf_rpc()? + MESSAGE_SEPARATOR;
+            let cmd = request.to_raw_xml()? + MESSAGE_SEPARATOR;
             self.write_all(cmd.as_bytes())?;
             let res = self.get_reply()?;
             Ok(res)

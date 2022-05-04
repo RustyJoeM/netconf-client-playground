@@ -12,7 +12,7 @@ use crate::{
     types::{Datastore, Filter, RpcErrorRpc, RpcReply},
 };
 
-use super::{FullResponse, NetconfResponse};
+use super::{FullResponse, NetconfRequest, NetconfResponse, ToPrettyXml, ToRawXml};
 
 #[derive(Debug, Clone)]
 pub struct GetConfigRequest {
@@ -33,10 +33,8 @@ impl GetConfigRequest {
     }
 }
 
-impl super::NetconfRequest for GetConfigRequest {
-    type Response = GetConfigResponse;
-
-    fn to_netconf_rpc(&self) -> Result<String> {
+impl ToRawXml for GetConfigRequest {
+    fn to_raw_xml(&self) -> Result<String> {
         let source_str = self.source.to_string();
 
         let mut events = vec![
@@ -50,13 +48,19 @@ impl super::NetconfRequest for GetConfigRequest {
         ];
 
         if let Some(filter) = &self.filter {
-            let filter_str = filter.to_netconf_rpc()?;
+            let filter_str = filter.to_raw_xml()?;
             events.push(Event::Text(BytesText::from_escaped_str(filter_str)));
         }
         events.push(Event::End(BytesEnd::borrowed(b"get-config")));
 
         xml_events_to_string(&events, RpcWrapMode::Wrapped(&self.message_id, &self.xmlns))
     }
+}
+
+impl ToPrettyXml for GetConfigRequest {}
+
+impl NetconfRequest for GetConfigRequest {
+    type Response = GetConfigResponse;
 }
 
 #[derive(Debug)]

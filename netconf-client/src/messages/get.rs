@@ -12,7 +12,7 @@ use crate::{
     types::{Filter, RpcErrorRpc, RpcReply},
 };
 
-use super::FullResponse;
+use super::{FullResponse, NetconfRequest, ToPrettyXml, ToRawXml};
 
 #[derive(Debug, Clone)]
 pub struct GetRequest {
@@ -31,21 +31,25 @@ impl GetRequest {
     }
 }
 
-impl super::NetconfRequest for GetRequest {
-    type Response = GetResponse;
-
-    fn to_netconf_rpc(&self) -> Result<String> {
+impl ToRawXml for GetRequest {
+    fn to_raw_xml(&self) -> Result<String> {
         // TODO - might move also root tag into `xml_events_to_string` if no usage has attributes?
         let mut events = vec![Event::Start(BytesStart::borrowed(b"get", b"get".len()))];
 
         if let Some(filter) = &self.filter {
-            let filter_str = filter.to_netconf_rpc()?;
+            let filter_str = filter.to_raw_xml()?;
             events.push(Event::Text(BytesText::from_escaped_str(filter_str)));
         }
         events.push(Event::End(BytesEnd::borrowed(b"get")));
 
         xml_events_to_string(&events, RpcWrapMode::Wrapped(&self.message_id, &self.xmlns))
     }
+}
+
+impl ToPrettyXml for GetRequest {}
+
+impl NetconfRequest for GetRequest {
+    type Response = GetResponse;
 }
 
 #[derive(Debug)]

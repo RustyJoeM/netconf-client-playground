@@ -4,6 +4,8 @@ use serde::Serialize;
 
 use crate::{common::XMLNS, types::SimpleResponse};
 
+use super::NetconfRequest;
+
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "DiscardChangesRequestRpc")]
 pub struct DiscardChangesRequest {
@@ -11,13 +13,8 @@ pub struct DiscardChangesRequest {
     pub xmlns: String,
 }
 
-impl super::NetconfRequest for DiscardChangesRequest {
+impl NetconfRequest for DiscardChangesRequest {
     type Response = DiscardChangesResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(&self)?;
-        Ok(res)
-    }
 }
 
 impl From<DiscardChangesRequest> for DiscardChangesRequestRpc {

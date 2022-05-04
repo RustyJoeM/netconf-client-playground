@@ -5,6 +5,8 @@ use crate::{
     types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
 };
 
+use super::NetconfRequest;
+
 /// The \<unlock\> request for releasing the short-lived restriction of datastore access.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "UnlockRequestRpc")]
@@ -19,13 +21,8 @@ impl UnlockRequest {
     }
 }
 
-impl super::NetconfRequest for UnlockRequest {
+impl NetconfRequest for UnlockRequest {
     type Response = UnlockResponse;
-
-    fn to_netconf_rpc(&self) -> anyhow::Result<String> {
-        let res = quick_xml::se::to_string(self)?;
-        Ok(res)
-    }
 }
 
 /// Private representation of \<lock\> RPC used for serialization.
