@@ -7,8 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow="1"
-clap = { version = "3", features = ["derive"] }
-reedline = "0.4.0"
+clap = { version = "3", features = ["derive", "unstable-multicall"] }
+shlex = "1.1.0"
+reedline = "0.5.0"
 # reedline = { git = "https://github.com/nushell/reedline" }
 # tokio = { version = "1", features = ["full"] }
 netconf-client = { path = "../netconf-client" }

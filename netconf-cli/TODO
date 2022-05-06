@@ -1,6 +1,7 @@
-- update helps for subcommands not to include binary name
-    (maybe global error parser/transformer to save on annotations/implementation?)
+- update helps for subcommands
 
 - recommendation to use `shlex` for line.split instead of String::split_whitespace?
     https://github.com/clap-rs/clap/discussions/3674
     https://crates.io/crates/shlex/1.1.0
+
+- add optional CLI sub-modes for dump/send only to save on first word prefix in dedicated user-session...

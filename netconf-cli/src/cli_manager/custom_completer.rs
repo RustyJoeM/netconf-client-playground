@@ -21,6 +21,7 @@ impl Completer for CustomCompleter {
                     description: None,
                     extra: None,
                     span: Span { start: 0, end: 0 },
+                    append_whitespace: true,
                 })
                 .collect();
             dbg!(&vv);

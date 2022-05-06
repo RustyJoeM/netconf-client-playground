@@ -2,67 +2,55 @@
 // #![warn(missing_docs)]
 // #![deny(missing_doc_code_examples)]
 
-mod commands;
-mod reedline_helpers;
+mod cli_manager;
+mod command_handler;
 
 use anyhow::Result;
 use clap::StructOpt;
+use cli_manager::CliManager;
+use command_handler::{CommandHandler, RootArgs};
 
 use colored::Colorize;
-use commands::CommandHandler;
 
 fn main() -> Result<()> {
+    let mut cli_manager = CliManager::new()?;
     let mut command_handler = CommandHandler::new();
 
     loop {
-        match command_handler.read_line() {
-            Ok(signal) => {
-                match signal {
-                    reedline::Signal::Success(line) => {
-                        if line.is_empty() {
-                            continue;
-                        }
-                        // command_handler.editor.add_history_entry(line.as_str());
-                        // println!("{}{}", prompt_str, line);
-                        match commands::RootArgs::try_parse_from(line.split_whitespace()) {
-                            Ok(matches) => match command_handler.handle_command(&matches.command) {
-                                Ok(_) => {}
-                                Err(err) => println!("{}", err.to_string().trim().yellow()),
-                            },
-                            Err(err) => {
-                                // println!("{:?}", err.kind());
-                                println!("{}", err.to_string().trim());
-
-                                // let kind = err.kind().to_string();
-                                // if !kind.is_empty() {
-                                //     println!("{}", kind);
-                                // }
-                                // let ctx: Vec<_> = err.context().collect();
-                                // if ctx.is_empty() {
-                                //     println!("{}", err.to_string().trim());
-                                // } else {
-                                //     for c in ctx {
-                                //         // println!("----");
-                                //         // println!("{:?}", c.0);
-                                //         println!("{:?}", c.1);
-                                //     }
-                                // }
-                            }
+        match cli_manager.get_user_input()? {
+            reedline::Signal::Success(line) => {
+                if line.is_empty() {
+                    continue;
+                }
+                let tokens = match shlex::split(&line) {
+                    Some(split) => split,
+                    None => {
+                        println!(
+                            "{}",
+                            "Failed to parse command - probably mismatched quotes?".yellow()
+                        );
+                        continue;
+                    }
+                };
+                // move this into command handler?
+                match RootArgs::try_parse_from(tokens) {
+                    Ok(matches) => {
+                        match command_handler.handle_command(&mut cli_manager, &matches.command) {
+                            Ok(_) => {}
+                            Err(err) => println!("{}", err.to_string().trim().yellow()),
                         }
                     }
-                    reedline::Signal::CtrlC => {
-                        println!("CTRL-C");
-                        break;
+                    Err(err) => {
+                        println!("{}", err.to_string().trim());
                     }
-                    reedline::Signal::CtrlD => {
-                        println!("CTRL-D");
-                        break;
-                    }
-                    reedline::Signal::CtrlL => todo!(),
                 }
             }
-            Err(err) => {
-                println!("Error: {:?}", err);
+            reedline::Signal::CtrlC => {
+                println!("CTRL-C");
+                break;
+            }
+            reedline::Signal::CtrlD => {
+                println!("CTRL-D");
                 break;
             }
         }

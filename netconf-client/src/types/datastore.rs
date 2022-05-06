@@ -22,7 +22,7 @@ impl std::fmt::Display for Datastore {
 }
 
 impl FromStr for Datastore {
-    type Err = std::io::Error;
+    type Err = std::string::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {

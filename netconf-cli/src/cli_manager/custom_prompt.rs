@@ -4,16 +4,23 @@ use reedline::{Prompt, PromptHistorySearchStatus};
 use time::OffsetDateTime;
 
 pub struct CustomPrompt {
-    prompt: String,
+    prompt: Cow<'static, str>,
 }
 
+const BASE_PROMPT: &str = "netconf-cli";
+
 impl CustomPrompt {
-    pub fn new(prompt: String) -> Self {
-        Self { prompt }
+    pub fn new() -> Self {
+        Self {
+            prompt: BASE_PROMPT.into(),
+        }
     }
 
-    pub fn update_prompt(&mut self, prompt: String) {
-        self.prompt = prompt;
+    pub fn set_sub_mode(&mut self, sub_mode: Option<String>) {
+        self.prompt = match sub_mode {
+            Some(s) => format!("{}({})", BASE_PROMPT, s).into(),
+            None => BASE_PROMPT.into(),
+        };
     }
 }
 
