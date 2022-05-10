@@ -18,23 +18,18 @@ pub struct RootArgs {
 
 #[derive(Subcommand, Debug)]
 pub enum RootCommand {
+    /// Modify the CLI behavior by applying various settings.
+    #[clap(subcommand)]
+    Config(CliConfigCommand),
     /// Dump the NETCONF request only, do not send to server
     #[clap(subcommand)]
     Dump(NetconfCommand),
     /// Raw NETCONF request dispatched to target server with subsequent response dump.
     #[clap(subcommand)]
     Send(NetconfCommand),
-    /// Modify the CLI behavior by applying various settings.
-    #[clap(subcommand)]
-    Config(CliConfigCommand),
     /// Display various aspects of running CLI/NETCONF session, etc.
     #[clap(subcommand)]
     Show(ShowCommand),
-    // #[clap(
-    //     about("Clear the whole previously saved history buffer."),
-    //     disable_help_flag(true),
-    //     arg_required_else_help = false
-    // )]
 }
 
 pub struct CommandHandler {}
