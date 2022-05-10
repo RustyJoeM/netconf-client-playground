@@ -26,9 +26,9 @@ impl From<CancelCommitRequest> for CancelCommitRequestRpc {
         CancelCommitRequestRpc {
             message_id: request.message_id,
             xmlns: request.xmlns,
-            cancel_commit: request.persist_id.map(|x| CancelCommitRpc {
-                persist_id: TagWrapper::new(x),
-            }),
+            cancel_commit: CancelCommitRpc {
+                persist_id: request.persist_id.map(TagWrapper::new),
+            },
         }
     }
 }
@@ -45,7 +45,7 @@ impl CancelCommitRequest {
 
 #[derive(Debug, Serialize)]
 struct CancelCommitRpc {
-    persist_id: TagWrapper<u32>,
+    persist_id: Option<TagWrapper<u32>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -54,7 +54,8 @@ struct CancelCommitRequestRpc {
     #[serde(rename = "message-id")]
     message_id: String,
     xmlns: String,
-    cancel_commit: Option<CancelCommitRpc>,
+    #[serde(rename = "cancel-commit")]
+    cancel_commit: CancelCommitRpc,
 }
 
 pub type CancelCommitResponse = SimpleResponse;

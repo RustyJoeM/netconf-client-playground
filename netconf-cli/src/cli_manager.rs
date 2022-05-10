@@ -7,7 +7,7 @@ mod custom_prompt;
 use custom_prompt::CustomPrompt;
 
 use netconf_client::NetconfSession;
-use reedline::{FileBackedHistory, Reedline, Signal};
+use reedline::{FileBackedHistory, Reedline, Signal, HISTORY_SIZE};
 
 pub use self::cli_config::{CliConfig, DumpXmlFormat};
 
@@ -65,7 +65,10 @@ impl CliManagerCommandApi for CliManager {
 
 impl CliManager {
     pub fn new() -> anyhow::Result<Self> {
-        let editor_history = Box::new(FileBackedHistory::with_file(5, HISTORY_FILE.into())?);
+        let editor_history = Box::new(FileBackedHistory::with_file(
+            HISTORY_SIZE,
+            HISTORY_FILE.into(),
+        )?);
 
         // let commands = vec![
         //     "test".into(),

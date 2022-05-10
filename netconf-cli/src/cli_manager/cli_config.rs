@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::bail;
+use netconf_client::types::Capability;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum DumpXmlFormat {
@@ -12,6 +13,7 @@ pub enum DumpXmlFormat {
 pub struct CliConfig {
     request_dump_mode: DumpXmlFormat,
     response_dump_mode: DumpXmlFormat,
+    client_capabilities: Vec<Capability>,
     // log_level: LogLevel, // TODO
 }
 
@@ -19,7 +21,8 @@ impl CliConfig {
     pub fn new() -> Self {
         Self {
             request_dump_mode: DumpXmlFormat::None,
-            response_dump_mode: DumpXmlFormat::None,
+            response_dump_mode: DumpXmlFormat::Pretty,
+            client_capabilities: vec![Capability::Base],
         }
     }
 
@@ -37,6 +40,10 @@ impl CliConfig {
 
     pub fn set_response_dump_mode(&mut self, mode: DumpXmlFormat) {
         self.response_dump_mode = mode;
+    }
+
+    pub fn client_capabilities(&self) -> &[Capability] {
+        &self.client_capabilities
     }
 }
 

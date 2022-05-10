@@ -4,9 +4,9 @@ use clap::Subcommand;
 use crate::cli_manager::{CliManagerCommandApi, DumpXmlFormat};
 
 #[derive(Subcommand, Debug)]
+#[clap(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub enum CliConfigCommand {
     /// Perform dump of XML to console when exchanging messages with NETCONF server.
-    #[clap(no_binary_name(true))]
     XmlDump {
         #[clap(long)]
         request: DumpXmlFormat,

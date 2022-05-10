@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use anyhow::bail;
 
 /// Enumeration of NETCONF capabilities defined in RFC6241.
@@ -76,5 +78,25 @@ impl Capability {
             }
         };
         Ok(instance)
+    }
+}
+
+impl Display for Capability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x = match self {
+            Capability::Base => ":base:1.0",
+            Capability::Base11 => ":base:1.1",
+            Capability::Candidate => ":candidate:1.0",
+            Capability::ConfirmedCommit => ":confirmed-commit:1.1",
+            Capability::RollbackOnError => ":rollback-on-error:1.0",
+            Capability::Startup => ":startup:1.0",
+            Capability::Url(_) => ":url:1.0",
+            Capability::Validate => ":validate:1.0",
+            Capability::Validate11 => ":validate:1.1",
+            Capability::WritableRunning => ":writable-running:1.0",
+            Capability::XPath => ":xpath:1.0",
+            Capability::Other(other) => other,
+        };
+        write!(f, "{}", x)
     }
 }

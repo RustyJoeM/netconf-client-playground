@@ -16,6 +16,8 @@ fn main() -> Result<()> {
     let mut cli_manager = CliManager::new()?;
     let mut command_handler = CommandHandler::new();
 
+    dump_welcome_banner();
+
     loop {
         match cli_manager.get_user_input()? {
             reedline::Signal::Success(line) => {
@@ -57,4 +59,13 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn dump_welcome_banner() {
+    println!("Welcome to {}!", "netconf-cli".bright_green());
+    println!(
+        "Run \"{}\" for available commands, or \"{}\" for details on specific command and its usage...",
+        "help".cyan(),
+        "help <command>".cyan()
+    );
 }

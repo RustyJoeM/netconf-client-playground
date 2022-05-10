@@ -1,5 +1,7 @@
 use std::net::IpAddr;
 
+use crate::messages::hello::HelloResponse;
+
 use super::messages::*;
 
 use super::messages::edit_config::EditConfigContent;
@@ -93,6 +95,10 @@ impl NetconfSession {
         Ok(instance)
     }
 
+    pub fn server_capabilities(&self) -> &Option<Vec<Capability>> {
+        &self.server_capabilities
+    }
+
     pub fn dispatch_request<R: NetconfRequest>(
         &mut self,
         request: R,
@@ -102,6 +108,12 @@ impl NetconfSession {
         Ok(FullResponse { typed, dump })
     }
 
+    // TODO - address automated connection process not to enforce user to invoke multiple of fns in sequence...
+    pub fn update_on_hello(&mut self, response: &HelloResponse) {
+        self.session_id = Some(response.session_id);
+        self.server_capabilities = Some(response.capabilities.clone());
+    }
+
     /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.
     /// These cannot be changed during session runtime.
     /// Server capabilities are stored in the [`Self`] instance after successful invocation.
@@ -109,8 +121,7 @@ impl NetconfSession {
         let request = hello::HelloRequest::new(self.client_capabilities.clone());
         let response = self.dispatch_request(request)?;
 
-        self.session_id = Some(response.typed.session_id);
-        self.server_capabilities = Some(response.typed.capabilities.clone());
+        self.update_on_hello(&response.typed);
 
         // RFC quote:
         // If no protocol version capability in common is found, the NETCONF peer MUST NOT continue the

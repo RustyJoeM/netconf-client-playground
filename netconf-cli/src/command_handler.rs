@@ -1,8 +1,6 @@
-mod cli_handler;
-mod netconf_handler;
+mod cli_config_commands;
+mod netconf_commands;
+mod root_commands;
+mod show_commands;
 
-mod clap_commands;
-pub use clap_commands::RootArgs;
-
-mod root_handler;
-pub use root_handler::CommandHandler;
+pub use root_commands::{CommandHandler, RootArgs};

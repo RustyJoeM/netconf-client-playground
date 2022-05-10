@@ -7,6 +7,7 @@ use serde::Serialize;
 pub enum Datastore {
     Running,
     Candidate,
+    Startup,
     Other(String), // TODO - fix unknown datastore ids & problem with extra <other> wrapper in serialization
 }
 
@@ -15,6 +16,7 @@ impl std::fmt::Display for Datastore {
         let ptr = match self {
             Datastore::Running => "running",
             Datastore::Candidate => "candidate",
+            Datastore::Startup => "startup",
             Datastore::Other(other) => other,
         };
         f.write_str(ptr)
@@ -28,6 +30,7 @@ impl FromStr for Datastore {
         Ok(match s {
             "running" => Datastore::Running,
             "candidate" => Datastore::Candidate,
+            "startup" => Datastore::Startup,
             s => Datastore::Other(s.to_string()),
         })
     }

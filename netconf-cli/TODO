@@ -5,3 +5,5 @@
     https://crates.io/crates/shlex/1.1.0
 
 - add optional CLI sub-modes for dump/send only to save on first word prefix in dedicated user-session...
+
+- make available commands dynamic (hide/disable?), according to client/server capabilities?
