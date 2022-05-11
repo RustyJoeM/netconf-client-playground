@@ -12,7 +12,7 @@ use crate::{
     types::{Filter, RpcErrorRpc, RpcReply},
 };
 
-use super::{FullResponse, NetconfRequest, ToPrettyXml, ToRawXml};
+use super::{FullResponse, NetconfRequest, NetconfResponse, ToPrettyXml, ToRawXml};
 
 #[derive(Debug, Clone)]
 pub struct GetRequest {
@@ -77,7 +77,7 @@ impl FullResponse<GetResponse> {
     }
 }
 
-impl super::NetconfResponse for GetResponse {
+impl NetconfResponse for GetResponse {
     fn from_netconf_rpc(s: &str) -> Result<Self>
     where
         Self: Sized,
@@ -94,5 +94,9 @@ impl super::NetconfResponse for GetResponse {
             xmlns,
             reply,
         })
+    }
+
+    fn succeeded(&self) -> bool {
+        self.reply == RpcReply::Ok
     }
 }

@@ -3,11 +3,20 @@ use clap::{ArgGroup, Subcommand};
 use colored::{Color, Colorize};
 use netconf_client::{
     messages::{
-        cancel_commit::CancelCommitRequest, close_session::CloseSessionRequest,
-        copy_config::CopyConfigRequest, delete_config::DeleteConfigRequest,
-        discard_changes::DiscardChangesRequest, get::GetRequest, get_config::GetConfigRequest,
-        hello::HelloRequest, kill_session::KillSessionRequest, lock::LockRequest,
-        raw_to_pretty_xml, unlock::UnlockRequest, FullResponse, NetconfResponse, ToRawXml,
+        cancel_commit::CancelCommitRequest,
+        close_session::CloseSessionRequest,
+        copy_config::CopyConfigRequest,
+        delete_config::DeleteConfigRequest,
+        discard_changes::DiscardChangesRequest,
+        get::GetRequest,
+        get_config::GetConfigRequest,
+        hello::HelloRequest,
+        kill_session::KillSessionRequest,
+        lock::LockRequest,
+        raw_to_pretty_xml,
+        unlock::UnlockRequest,
+        validate::{ValidateRequest, ValidateSource},
+        FullResponse, NetconfResponse, ToRawXml,
     },
     types::{Capability, ConfigWaypoint, Datastore, Filter, FilterType},
     NetconfSession, SshAuthentication,
@@ -116,7 +125,11 @@ pub enum NetconfCommand {
     CancelCommit {
         persist_id: Option<u32>,
     },
-    Validate {},
+    /// Validates the contents of the specified configuration.
+    Validate {
+        #[clap(subcommand)]
+        source: ValidateSourceCommand,
+    },
     /// Dispatch <close-session> request for currently opened NETCONF session.
     CloseSession {},
 }
@@ -174,7 +187,10 @@ impl NetconfCommand {
             NetconfCommand::CancelCommit { persist_id } => {
                 CancelCommitRequest::new(message_id, *persist_id).to_raw_xml()
             }
-            NetconfCommand::Validate {} => todo!(),
+            NetconfCommand::Validate { source } => {
+                let source = source.to_validate_source();
+                ValidateRequest::new(message_id, source).to_raw_xml()
+            }
             NetconfCommand::CloseSession {} => CloseSessionRequest::new(message_id).to_raw_xml(),
         }
     }
@@ -303,6 +319,12 @@ impl NetconfCommand {
                 let response = pending_session.dispatch_request(request)?;
                 let _ = dump_response(response_dump_mode, &response);
             }
+            NetconfCommand::Validate { source } => {
+                let source = source.to_validate_source();
+                let request = ValidateRequest::new(message_id, source);
+                let response = pending_session.dispatch_request(request)?;
+                let _ = dump_response(response_dump_mode, &response);
+            }
             _ => {}
         }
 
@@ -326,7 +348,10 @@ pub fn dump_response<R: NetconfResponse>(
             false => Color::BrightRed,
         };
         println!("{}", "Response:".color(header_color));
-        println!("{}", &s);
+        match response.typed.succeeded() {
+            true => println!("{}", &s),
+            false => println!("{}", &s.yellow()),
+        };
     }
     Ok(())
 }
@@ -363,6 +388,32 @@ impl From<&FilterCommand> for Filter {
         Filter {
             value,
             namespaces: vec![],
+        }
+    }
+}
+
+#[derive(clap::Parser, Debug)]
+#[clap(setting = clap::AppSettings::DeriveDisplayOrder)]
+pub enum ValidateSourceCommand {
+    /// Datastore to be validate.
+    Datastore {
+        #[clap(possible_values = Datastore::values())]
+        value: Datastore,
+    },
+    /// Complete configuration to be validated.
+    Config { value: String },
+    /// Url of the configuration for validation.
+    Url { value: String },
+}
+
+impl ValidateSourceCommand {
+    pub fn to_validate_source(&self) -> ValidateSource {
+        match self {
+            ValidateSourceCommand::Datastore { value } => {
+                ValidateSource::Datastore(value.to_owned())
+            }
+            ValidateSourceCommand::Config { value } => ValidateSource::Config(value.to_owned()),
+            ValidateSourceCommand::Url { value } => ValidateSource::Url(value.to_owned()),
         }
     }
 }

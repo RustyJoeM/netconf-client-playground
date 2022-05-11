@@ -97,6 +97,10 @@ impl NetconfResponse for GetConfigResponse {
             reply,
         })
     }
+
+    fn succeeded(&self) -> bool {
+        self.reply == RpcReply::Ok
+    }
 }
 
 impl FullResponse<GetConfigResponse> {
