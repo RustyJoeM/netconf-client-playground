@@ -35,3 +35,9 @@ impl FromStr for Datastore {
         })
     }
 }
+
+impl Datastore {
+    pub fn values() -> Vec<&'static str> {
+        vec!["running", "candidate", "startup"]
+    }
+}

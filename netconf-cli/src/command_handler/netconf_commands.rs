@@ -5,11 +5,11 @@ use netconf_client::{
     messages::{
         cancel_commit::CancelCommitRequest, close_session::CloseSessionRequest,
         copy_config::CopyConfigRequest, delete_config::DeleteConfigRequest,
-        discard_changes::DiscardChangesRequest, hello::HelloRequest,
-        kill_session::KillSessionRequest, lock::LockRequest, raw_to_pretty_xml,
-        unlock::UnlockRequest, FullResponse, NetconfResponse, ToRawXml,
+        discard_changes::DiscardChangesRequest, get::GetRequest, get_config::GetConfigRequest,
+        hello::HelloRequest, kill_session::KillSessionRequest, lock::LockRequest,
+        raw_to_pretty_xml, unlock::UnlockRequest, FullResponse, NetconfResponse, ToRawXml,
     },
-    types::{Capability, ConfigWaypoint, Datastore},
+    types::{Capability, ConfigWaypoint, Datastore, Filter, FilterType},
     NetconfSession, SshAuthentication,
 };
 use std::net::IpAddr;
@@ -17,8 +17,6 @@ use std::net::IpAddr;
 use crate::cli_manager::{CliManagerCommandApi, DumpXmlFormat};
 
 pub const NO_SESSION_ERROR_STR: &str = "There is no opened NETCONF session!";
-
-const DATASTORES: [&str; 2] = ["running", "candidate"];
 
 #[derive(Subcommand, Debug)]
 #[clap(setting = clap::AppSettings::DeriveDisplayOrder)]
@@ -41,16 +39,28 @@ pub enum NetconfCommand {
     },
     /// The <lock> operation allows the client to lock the entire configuration datastore system of a device.
     Lock {
-        #[clap(possible_values = DATASTORES)]
+        #[clap(possible_values = Datastore::values())]
         target: Datastore,
     },
     /// The <unlock> operation is used to release a configuration lock, previously obtained with the <lock> operation.
     Unlock {
-        #[clap(possible_values = DATASTORES)]
+        #[clap(possible_values = Datastore::values())]
         target: Datastore,
     },
-    Get {},
-    GetConfig {},
+    /// Retrieve running configuration and device state information.
+    Get {
+        #[clap(subcommand)]
+        filter: Option<FilterCommand>,
+    },
+    /// Retrieve all or part of a specified configuration datastore.
+    GetConfig {
+        /// Datastore containing the requested configuration.
+        #[clap(possible_values = Datastore::values())]
+        source: Datastore,
+        /// Optional filter to retrieve specified part of config.
+        #[clap(subcommand)]
+        filter: Option<FilterCommand>,
+    },
     EditConfig {},
     /// Create or replace an entire configuration datastore with the contents of another complete configuration datastore.
     #[clap(group(
@@ -66,13 +76,13 @@ pub enum NetconfCommand {
     ))]
     CopyConfig {
         /// Source datastore to be copied from.
-        #[clap(long, possible_values = DATASTORES)]
+        #[clap(long, possible_values = Datastore::values())]
         from_datastore: Option<Datastore>,
         /// Source alternative - URL of configuration to be copied from, for `:url` capability enabled servers.
         #[clap(long)]
         from_url: Option<String>,
         /// Target datastore to be written to.
-        #[clap(long, possible_values = DATASTORES)]
+        #[clap(long, possible_values = Datastore::values())]
         to_datastore: Option<Datastore>,
         /// Target alternative - URL of configuration to be copied into, for `:url` capability enabled servers.
         #[clap(long)]
@@ -87,7 +97,7 @@ pub enum NetconfCommand {
     /// Delete a configuration datastore. The <running> configuration datastore cannot be deleted.
     DeleteConfig {
         /// Target datastore.
-        #[clap(long, possible_values = DATASTORES)]
+        #[clap(long, possible_values = Datastore::values())]
         datastore: Option<Datastore>,
         /// URL of the target, for  :url capability enabled servers.
         #[clap(long)]
@@ -131,8 +141,14 @@ impl NetconfCommand {
             NetconfCommand::Unlock { target } => {
                 UnlockRequest::new(message_id, target.clone()).to_raw_xml()
             }
-            NetconfCommand::Get {} => todo!(),
-            NetconfCommand::GetConfig {} => todo!(),
+            NetconfCommand::Get { filter } => {
+                let filter = filter.as_ref().map(|f| f.into());
+                GetRequest::new(message_id, filter).to_raw_xml()
+            }
+            NetconfCommand::GetConfig { source, filter } => {
+                let filter = filter.as_ref().map(|f| f.into());
+                GetConfigRequest::new(message_id, source.clone(), filter).to_raw_xml()
+            }
             NetconfCommand::EditConfig {} => todo!(),
             NetconfCommand::CopyConfig {
                 from_datastore,
@@ -142,7 +158,6 @@ impl NetconfCommand {
             } => {
                 let source = args_to_config_waypoint(from_datastore, from_url)?;
                 let target = args_to_config_waypoint(to_datastore, to_url)?;
-                // dbg!(&source, &target);
                 CopyConfigRequest::new(message_id, target, source).to_raw_xml()
             }
             NetconfCommand::DeleteConfig { datastore, url } => {
@@ -276,6 +291,18 @@ impl NetconfCommand {
                     cli_api.set_pending_session(None);
                 }
             }
+            NetconfCommand::Get { filter } => {
+                let filter = filter.as_ref().map(|f| f.into());
+                let request = GetRequest::new(message_id, filter);
+                let response = pending_session.dispatch_request(request)?;
+                let _ = dump_response(response_dump_mode, &response);
+            }
+            NetconfCommand::GetConfig { source, filter } => {
+                let filter = filter.as_ref().map(|f| f.into());
+                let request = GetConfigRequest::new(message_id, source.to_owned(), filter);
+                let response = pending_session.dispatch_request(request)?;
+                let _ = dump_response(response_dump_mode, &response);
+            }
             _ => {}
         }
 
@@ -315,5 +342,27 @@ fn args_to_config_waypoint(
         Ok(ConfigWaypoint::Url(url.to_string()))
     } else {
         bail!("Failed to parse source!");
+    }
+}
+
+#[derive(clap::Parser, Debug)]
+pub enum FilterCommand {
+    /// Specify items with [subtree](https://datatracker.ietf.org/doc/html/rfc6241#section-6) filtering.
+    Subtree { value: String },
+    /// Filter using [xpath(https://datatracker.ietf.org/doc/html/rfc6241#section-8.9) expression.
+    #[clap(name = "xpath")]
+    XPath { value: String },
+}
+
+impl From<&FilterCommand> for Filter {
+    fn from(cmd: &FilterCommand) -> Self {
+        let value = match cmd {
+            FilterCommand::Subtree { value } => FilterType::Subtree(value.to_string()),
+            FilterCommand::XPath { value } => FilterType::Xpath(value.to_string()),
+        };
+        Filter {
+            value,
+            namespaces: vec![],
+        }
     }
 }

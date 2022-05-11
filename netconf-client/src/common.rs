@@ -35,20 +35,23 @@ pub(crate) enum RpcWrapMode<'a> {
 }
 
 pub(crate) fn xml_events_to_string(events: &[Event], wrap: RpcWrapMode) -> Result<String> {
-    let mut head_elem = BytesStart::borrowed(b"rpc", b"rpc".len());
+    let mut writer = Writer::new(Cursor::new(Vec::new()));
+
     if let RpcWrapMode::Wrapped(message_id, xmlns) = wrap {
+        let mut head_elem = BytesStart::borrowed(b"rpc", b"rpc".len());
         head_elem.push_attribute(("message-id", message_id));
         head_elem.push_attribute(("xmlns", xmlns));
+        writer.write_event(Event::Start(head_elem))?;
     }
-    let head = std::iter::once(Event::Start(head_elem));
-    let tail = std::iter::once(Event::End(BytesEnd::borrowed(b"rpc")));
 
-    let all_events = head.chain(events.iter().cloned()).chain(tail);
-
-    let mut writer = Writer::new(Cursor::new(Vec::new()));
-    for event in all_events {
+    for event in events {
         writer.write_event(event)?;
     }
+
+    if let RpcWrapMode::Wrapped(_, _) = wrap {
+        writer.write_event(Event::End(BytesEnd::borrowed(b"rpc")))?;
+    }
+
     let rpc_bytes = writer.into_inner().into_inner();
     Ok(String::from_utf8(rpc_bytes)?)
 }

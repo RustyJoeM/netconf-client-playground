@@ -8,9 +8,9 @@ use crate::cli_manager::{CliManagerCommandApi, DumpXmlFormat};
 pub enum CliConfigCommand {
     /// Perform dump of XML to console when exchanging messages with NETCONF server.
     XmlDump {
-        #[clap(long)]
+        #[clap(long, possible_values = DumpXmlFormat::values())]
         request: DumpXmlFormat,
-        #[clap(long)]
+        #[clap(long, possible_values = DumpXmlFormat::values())]
         response: DumpXmlFormat,
     },
 }

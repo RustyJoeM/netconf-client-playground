@@ -59,3 +59,9 @@ impl FromStr for DumpXmlFormat {
         }
     }
 }
+
+impl DumpXmlFormat {
+    pub fn values() -> Vec<&'static str> {
+        vec!["none", "raw", "pretty"]
+    }
+}
