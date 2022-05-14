@@ -1,6 +1,7 @@
 use std::net::IpAddr;
 
 use crate::messages::hello::HelloResponse;
+use crate::ssh_client::BaseCapability;
 
 use super::messages::*;
 
@@ -99,6 +100,10 @@ impl NetconfSession {
         &self.server_capabilities
     }
 
+    pub fn base_capability(&self) -> BaseCapability {
+        self.ssh.base_capability()
+    }
+
     pub fn dispatch_request<R: NetconfRequest>(
         &mut self,
         request: R,
@@ -109,9 +114,24 @@ impl NetconfSession {
     }
 
     // TODO - address automated connection process not to enforce user to invoke multiple of fns in sequence...
-    pub fn update_on_hello(&mut self, response: &HelloResponse) {
+    /// Update internal state of [`NetconfSession`] according to the hello capabilities exchange results.
+    pub fn update_on_hello(&mut self, response: &HelloResponse) -> Result<()> {
+        // RFC quote:
+        // If no protocol version capability in common is found, the NETCONF peer MUST NOT continue the
+        // session. If more than one protocol version URI in common is present, then the highest numbered
+        // (most recent) protocol version MUST be used by both peers.
+        let base_capability =
+            common_highest_base_capability(&self.client_capabilities, &response.capabilities);
+
+        match base_capability {
+            Some(base_capability) => self.ssh.set_base_capability(base_capability),
+            None => bail!("No common base capability found!".to_string()),
+        };
+
         self.session_id = Some(response.session_id);
         self.server_capabilities = Some(response.capabilities.clone());
+
+        Ok(())
     }
 
     /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.
@@ -121,25 +141,7 @@ impl NetconfSession {
         let request = hello::HelloRequest::new(self.client_capabilities.clone());
         let response = self.dispatch_request(request)?;
 
-        self.update_on_hello(&response.typed);
-
-        // RFC quote:
-        // If no protocol version capability in common is found, the NETCONF peer MUST NOT continue the
-        // session. If more than one protocol version URI in common is present, then the highest numbered
-        // (most recent) protocol version MUST be used by both peers.
-        if self.validate_capabilities {
-            for base in vec![Capability::Base11, Capability::Base] {
-                if !self.client_capabilities.contains(&base) {
-                    continue;
-                }
-                if let Some(caps) = &self.server_capabilities {
-                    if caps.contains(&base) {
-                        return Ok(response);
-                    }
-                }
-            }
-            bail!("No common base capability found!".to_string())
-        }
+        self.update_on_hello(&response.typed)?;
 
         Ok(response)
     }
@@ -308,5 +310,23 @@ impl NetconfSession {
         // TODO - validate 1.0 vs 1.1 depending on client
         let request = validate::ValidateRequest::new(self.new_message_id(), source);
         self.dispatch_request(request)
+    }
+}
+
+fn common_highest_base_capability(
+    client_capabilities: &[Capability],
+    server_capabilities: &[Capability],
+) -> Option<BaseCapability> {
+    let common_cap = [Capability::Base11, Capability::Base]
+        .iter()
+        .find(|base| client_capabilities.contains(base) && server_capabilities.contains(base));
+
+    match common_cap {
+        Some(cap) => match cap {
+            Capability::Base => Some(BaseCapability::Base),
+            Capability::Base11 => Some(BaseCapability::Base11),
+            _ => None,
+        },
+        None => None,
     }
 }

@@ -47,7 +47,12 @@ impl CommandHandler {
         match command {
             RootCommand::Config(command) => command.handle(cli_api),
             RootCommand::Dump(command) => {
-                let _ = command.dump_command_xml(DumpXmlFormat::Pretty, "XML dump only:", "dump");
+                let _ = command.dump_command_xml(
+                    cli_api,
+                    DumpXmlFormat::Pretty,
+                    "XML dump only:",
+                    "dump",
+                );
                 Ok(())
             }
             RootCommand::Send(command) => command.handle(cli_api),

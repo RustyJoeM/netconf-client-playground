@@ -5,14 +5,41 @@ use anyhow::{bail, Result};
 use ssh2::{Channel, Session};
 
 use std::{
+    fmt::Display,
     io::{self, Read, Write},
     net::{IpAddr, SocketAddr, TcpStream},
 };
 
 use super::messages::NetconfRequest;
 
-/// RFC specified NETCONF message separator.
-const MESSAGE_SEPARATOR: &str = "]]>]]>";
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum BaseCapability {
+    /// NETCONF 1.0 raw message processing.
+    Base,
+    // NETCONF 1.1 chunked message processing.
+    Base11,
+}
+
+impl BaseCapability {
+    /// [RFC 6242](https://datatracker.ietf.org/doc/html/rfc6242) specified end-of-message separator.
+    pub fn eom_separator(&self) -> &'static str {
+        match self {
+            BaseCapability::Base => "]]>]]>",
+            BaseCapability::Base11 => "\n##\n",
+        }
+    }
+}
+
+impl Display for BaseCapability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            BaseCapability::Base => "plain :base:1.0",
+            BaseCapability::Base11 => "chunked :base:1.1",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 const SSH_TIMEOUT: u32 = 5000;
 
 /// Type of authentication used for SSH connection.
@@ -28,6 +55,7 @@ pub struct SshClient {
     port: u16,
     auth: SshAuthentication,
     channel: Option<Channel>,
+    base_capability: BaseCapability,
 }
 
 impl SshClient {
@@ -39,9 +67,22 @@ impl SshClient {
             port,
             auth,
             channel: None,
+            base_capability: BaseCapability::Base,
         }
     }
 
+    /// Return the message exchange mode set for the pending session.
+    pub fn base_capability(&self) -> BaseCapability {
+        self.base_capability
+    }
+
+    /// Set the message exchange mode/base capability, as a result of the <hello> capabilities exchange
+    /// defined by [RFC 6241](https://datatracker.ietf.org/doc/html/rfc6241#section-8.1).
+    pub fn set_base_capability(&mut self, base_capability: BaseCapability) {
+        self.base_capability = base_capability;
+    }
+
+    /// String representing the target NETCONF server address & port.
     pub fn target_string(&self) -> String {
         format!("{}:{}", self.address, self.port)
     }
@@ -90,10 +131,15 @@ impl SshClient {
     /// Returns the String containing whole reponse received from server up to & excluding the NETCONF message separator.
     pub fn dispatch_netconf_request(&mut self, request: &impl NetconfRequest) -> Result<String> {
         if self.channel.is_some() {
-            let cmd = request.to_raw_xml()? + MESSAGE_SEPARATOR;
-            self.write_all(cmd.as_bytes())?;
-            let res = self.get_reply()?;
-            Ok(res)
+            // TODO - max length check?
+            let raw_dump = request.to_raw_xml()?;
+            if self.base_capability == BaseCapability::Base11 {
+                self.write_all(format!("\n#{}\n", raw_dump.len()).as_bytes())?;
+            }
+            self.write_all(raw_dump.as_bytes())?;
+            self.write_all(self.base_capability.eom_separator().as_bytes())?;
+
+            self.get_reply()
         } else {
             bail!("request: Channel not connected!");
         }
@@ -107,25 +153,37 @@ impl SshClient {
 
         let mut result = String::new();
         loop {
-            let mut buffer = [1u8; 1024];
+            let mut buffer = [1u8; 4096];
             let bytes_read = self.read(&mut buffer)?;
             let s = String::from_utf8_lossy(&buffer[..bytes_read]);
-            result.push_str(&s);
 
-            if result.ends_with(MESSAGE_SEPARATOR) {
-                break;
-            }
-            if result.ends_with("##") {
+            match &self.base_capability {
+                BaseCapability::Base => {
+                    result.push_str(&s);
+                }
+                BaseCapability::Base11 => {
+                    let slice = if let Some((index, _)) = s.match_indices('\n').nth(1) {
+                        &s[index..]
+                    } else {
+                        &s
+                    };
+                    result.push_str(slice);
+                }
+            };
+
+            if result.ends_with(self.base_capability.eom_separator()) {
                 break;
             }
 
             if bytes_read == 0 || self.channel.as_ref().unwrap().eof() {
-                bail!("Buffer is empty, SSH channel read terminated");
+                bail!("Buffer is unexpectedly empty, SSH channel read terminated.\nData read before encountering the problem: {}", result);
             }
         }
-        if let Some(stripped) = result.strip_suffix(MESSAGE_SEPARATOR) {
+
+        if let Some(stripped) = result.strip_suffix(self.base_capability.eom_separator()) {
             result = stripped.to_string();
         }
+
         Ok(result)
     }
 }

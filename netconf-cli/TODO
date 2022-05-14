@@ -7,3 +7,6 @@
 - add optional CLI sub-modes for dump/send only to save on first word prefix in dedicated user-session...
 
 - make available commands dynamic (hide/disable?), according to client/server capabilities?
+
+- introduce fluent templates (or other localization crate/tools) to allow for multi-lang CLI?
+  - might run into problems/need of restructuring comments/clap annotations for commands... though might be nice feature

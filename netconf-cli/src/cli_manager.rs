@@ -24,8 +24,8 @@ pub trait CliManagerCommandApi {
     fn config(&self) -> &CliConfig;
     fn config_mut(&mut self) -> &mut CliConfig;
     fn prompt_mut(&mut self) -> &mut CustomPrompt;
-    fn pending_session(&self) -> &Option<NetconfSession>;
-    fn pending_session_mut(&mut self) -> &mut Option<NetconfSession>;
+    fn pending_session(&self) -> Option<&NetconfSession>;
+    fn pending_session_mut(&mut self) -> Option<&mut NetconfSession>;
     fn set_pending_session(&mut self, session: Option<NetconfSession>);
 }
 
@@ -42,17 +42,17 @@ impl CliManagerCommandApi for CliManager {
         &mut self.prompt
     }
 
-    fn pending_session(&self) -> &Option<NetconfSession> {
-        &self.pending_session
+    fn pending_session(&self) -> Option<&NetconfSession> {
+        self.pending_session.as_ref()
     }
 
-    fn pending_session_mut(&mut self) -> &mut Option<NetconfSession> {
-        &mut self.pending_session
+    fn pending_session_mut(&mut self) -> Option<&mut NetconfSession> {
+        self.pending_session.as_mut()
     }
 
     fn set_pending_session(&mut self, session: Option<NetconfSession>) {
         self.pending_session = session;
-        let new_prompt = self.pending_session.as_ref().map(|session| {
+        let new_prompt = self.pending_session().map(|session| {
             format!(
                 "session-id:{}@{}",
                 session.session_id().unwrap_or(0),

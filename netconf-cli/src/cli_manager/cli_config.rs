@@ -22,7 +22,7 @@ impl CliConfig {
         Self {
             request_dump_mode: DumpXmlFormat::None,
             response_dump_mode: DumpXmlFormat::Pretty,
-            client_capabilities: vec![Capability::Base],
+            client_capabilities: vec![Capability::Base, Capability::Base11],
         }
     }
 

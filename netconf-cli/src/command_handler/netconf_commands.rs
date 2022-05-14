@@ -135,7 +135,11 @@ pub enum NetconfCommand {
 }
 
 impl NetconfCommand {
-    pub fn to_raw_xml(&self, message_id: String) -> Result<String> {
+    pub fn to_raw_xml(
+        &self,
+        cli_api: &impl CliManagerCommandApi,
+        message_id: String,
+    ) -> Result<String> {
         match self {
             NetconfCommand::Hello {
                 address: _,
@@ -143,8 +147,7 @@ impl NetconfCommand {
                 user: _,
                 password: _,
             } => {
-                // let capabilities = cli_api.config().client_capabilities().to_owned();
-                let capabilities = vec![Capability::Base];
+                let capabilities = cli_api.config().client_capabilities().to_owned();
                 let request = HelloRequest::new(capabilities);
                 request.to_raw_xml()
             }
@@ -197,15 +200,16 @@ impl NetconfCommand {
 
     pub fn dump_command_xml(
         &self,
+        cli_api: &mut impl CliManagerCommandApi,
         dump_mode: DumpXmlFormat,
         header: &str,
         message_id: &str,
     ) -> Result<()> {
         let dump_string = match dump_mode {
             DumpXmlFormat::None => None,
-            DumpXmlFormat::Raw => Some(self.to_raw_xml(message_id.to_string())?),
+            DumpXmlFormat::Raw => Some(self.to_raw_xml(cli_api, message_id.to_string())?),
             DumpXmlFormat::Pretty => {
-                let raw = self.to_raw_xml(message_id.to_string())?;
+                let raw = self.to_raw_xml(cli_api, message_id.to_string())?;
                 Some(raw_to_pretty_xml(&raw)?)
             }
         };
@@ -227,6 +231,10 @@ impl NetconfCommand {
             password,
         } = &self
         {
+            if cli_api.pending_session().is_some() {
+                bail!("There is a pending session opened already! Close it via <close-session> request first to initiate a new one...");
+            }
+
             let auth = SshAuthentication::UserPassword(user.to_owned(), password.to_owned());
 
             let client_capabilities: Vec<Capability> =
@@ -235,16 +243,20 @@ impl NetconfCommand {
             let mut session =
                 NetconfSession::new(*address, *port, auth, client_capabilities.clone());
             session.connect()?;
-            println!("Connected to target NETCONF server.");
+            println!("SSH connected to target NETCONF server.");
 
             let request = HelloRequest::new(client_capabilities);
-            let _ = self.dump_command_xml(request_dump_mode, "Request:", "0");
+            let _ = self.dump_command_xml(cli_api, request_dump_mode, "Request:", "0");
 
             let response = session.dispatch_request(request)?;
             let _ = dump_response(response_dump_mode, &response);
 
             if response.typed.succeeded() {
-                session.update_on_hello(&response.typed);
+                session.update_on_hello(&response.typed)?;
+                println!(
+                    "Hello capability exchange successful, base capability: {}",
+                    format!("{}", session.base_capability()).cyan()
+                );
                 cli_api.set_pending_session(Some(session));
                 return Ok(());
             }
@@ -252,14 +264,15 @@ impl NetconfCommand {
             bail!("Failed to connect to NETCONF server!")
         };
 
-        let pending_session = match cli_api.pending_session_mut() {
-            Some(session) => session,
+        let message_id = match cli_api.pending_session_mut() {
+            Some(session) => session.new_message_id(),
             None => bail!(NO_SESSION_ERROR_STR),
         };
 
-        let message_id = pending_session.new_message_id();
+        let _ = self.dump_command_xml(cli_api, request_dump_mode, "Request:", &message_id);
 
-        let _ = self.dump_command_xml(request_dump_mode, "Request:", &message_id);
+        let pending_session = cli_api.pending_session_mut().unwrap();
+
         match &self {
             NetconfCommand::Lock { target } => {
                 let request = LockRequest::new(message_id, target.clone());
