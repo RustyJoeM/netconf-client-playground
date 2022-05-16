@@ -5,9 +5,8 @@ use crate::ssh_client::BaseCapability;
 
 use super::messages::*;
 
-use super::messages::edit_config::EditConfigContent;
 use super::ssh_client::SshClient;
-use super::types::{Capability, ConfigWaypoint, Datastore, FilterPayload, RpcReply};
+use super::types::{Capability, RpcReply};
 use super::SshAuthentication;
 
 use anyhow::{bail, Result};
@@ -50,6 +49,10 @@ impl NetconfSession {
         self.session_id
     }
 
+    pub fn validate_capabilities(&self) -> bool {
+        self.validate_capabilities
+    }
+
     /// Set whether to perform server capabilities check before dispatching the actual RPCs to server.
     ///
     /// Upon initial \<hello\> exchange when session is created, capabilities advertised by NETCONF server are stored internally.
@@ -74,14 +77,6 @@ impl NetconfSession {
         self.last_message_id.to_string()
     }
 
-    /// Check whether specific Capability is among the ones advertised by the connected NETCONF server.
-    fn got_server_capability(&self, cap: Capability) -> bool {
-        match &self.server_capabilities {
-            Some(caps) => caps.contains(&cap),
-            None => false,
-        }
-    }
-
     /// All-in-one constructor that connects to the target NETCONF server,
     /// and exchanges the \<hello\> messages and capabilities information.
     pub fn initialize(
@@ -96,18 +91,25 @@ impl NetconfSession {
         Ok(instance)
     }
 
-    pub fn server_capabilities(&self) -> &Option<Vec<Capability>> {
-        &self.server_capabilities
+    pub fn server_capabilities(&self) -> Option<&[Capability]> {
+        self.server_capabilities.as_deref()
     }
 
     pub fn base_capability(&self) -> BaseCapability {
         self.ssh.base_capability()
     }
 
+    /// Core method for dispatching NETCONF requests to server.
     pub fn dispatch_request<R: NetconfRequest>(
         &mut self,
         request: R,
     ) -> Result<FullResponse<R::Response>> {
+        if self.validate_capabilities {
+            match self.server_capabilities() {
+                Some(caps) => request.validate_request(caps)?,
+                None => bail!("No server capabilities! Session not initiated yet?"),
+            };
+        }
         let dump = self.ssh.dispatch_netconf_request(&request)?;
         let typed = R::Response::from_netconf_rpc(&dump)?;
         Ok(FullResponse { typed, dump })
@@ -157,159 +159,6 @@ impl NetconfSession {
         }
 
         Ok(response)
-    }
-
-    pub fn request_lock(
-        &mut self,
-        datastore: Datastore,
-    ) -> Result<FullResponse<lock::LockResponse>> {
-        let request = lock::LockRequest::new(self.new_message_id(), datastore);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_unlock(
-        &mut self,
-        datastore: Datastore,
-    ) -> Result<FullResponse<unlock::UnlockResponse>> {
-        let request = unlock::UnlockRequest::new(self.new_message_id(), datastore);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_get(
-        &mut self,
-        filter: Option<FilterPayload>,
-    ) -> Result<FullResponse<get::GetResponse>> {
-        let request = get::GetRequest::new(self.new_message_id(), filter);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_get_config(
-        &mut self,
-        source: Datastore,
-        filter: Option<FilterPayload>,
-    ) -> Result<FullResponse<get_config::GetConfigResponse>> {
-        let request = get_config::GetConfigRequest::new(self.new_message_id(), source, filter);
-        self.dispatch_request(request)
-    }
-
-    // TODO - untested - possibly unfinished/incorrect (de)serialization...
-    pub fn request_edit_config(
-        &mut self,
-        params: edit_config::EditConfigParams,
-    ) -> Result<FullResponse<edit_config::EditConfigResponse>> {
-        if self.validate_capabilities {
-            if params.target == Datastore::Running
-                && !self.got_server_capability(Capability::WritableRunning)
-            {
-                bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
-            };
-            if let Some(error_option) = &params.error_option {
-                if *error_option == edit_config::ErrorOption::RollbackOnError
-                    && !self.got_server_capability(Capability::RollbackOnError)
-                {
-                    bail!("Server didn't advertise :rollback-on-error capability! Cannot use this error-option.");
-                }
-            }
-            if params.test_option.is_some() && !self.got_server_capability(Capability::Validate11) {
-                bail!("Server didn't advertise :validate:1.1 capability! Cannot use test-option.");
-            }
-            if let EditConfigContent::Url(_) = &params.config {
-                // TODO - check scheme used -> getter for generic Url capability - check schemes supported by server vs the one being used by caller
-            }
-        }
-
-        let request = edit_config::EditConfigRequest::new(self.new_message_id(), params);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_copy_config(
-        &mut self,
-        target: ConfigWaypoint,
-        source: ConfigWaypoint,
-    ) -> Result<FullResponse<copy_config::CopyConfigResponse>> {
-        if self.validate_capabilities
-            && target == ConfigWaypoint::Datastore(Datastore::Running)
-            && !self.got_server_capability(Capability::WritableRunning)
-        {
-            bail!("Cannot write to running datastore, server didn't advertise :writable-running capability!");
-        }
-
-        let request = copy_config::CopyConfigRequest::new(self.new_message_id(), target, source);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_delete_config(
-        &mut self,
-        target: ConfigWaypoint,
-    ) -> Result<FullResponse<delete_config::DeleteConfigResponse>> {
-        let request = delete_config::DeleteConfigRequest::new(self.new_message_id(), target);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_kill_session(
-        &mut self,
-        session_id: u32,
-    ) -> Result<FullResponse<kill_session::KillSessionResponse>> {
-        let request = kill_session::KillSessionRequest::new(self.new_message_id(), session_id);
-        self.dispatch_request(request)
-    }
-
-    fn commit(
-        &mut self,
-        params: Option<commit::ConfirmedCommitParams>,
-    ) -> Result<FullResponse<commit::CommitResponse>> {
-        let request = commit::CommitRequest::new(self.new_message_id(), params);
-        self.dispatch_request(request)
-    }
-
-    pub fn request_commit(&mut self) -> Result<FullResponse<commit::CommitResponse>> {
-        if self.validate_capabilities && !self.got_server_capability(Capability::Candidate) {
-            bail!("<commit> operation allowed only for :candidate enabled servers!");
-        };
-        self.commit(None)
-    }
-
-    pub fn request_confirmed_commit(
-        &mut self,
-        params: commit::ConfirmedCommitParams,
-    ) -> Result<FullResponse<commit::CommitResponse>> {
-        if self.validate_capabilities && !self.got_server_capability(Capability::ConfirmedCommit) {
-            bail!("<commit> operation with parameters allowed only for :confirmed-commit enabled servers!");
-        };
-        self.commit(Some(params))
-    }
-
-    pub fn request_discard_changes(
-        &mut self,
-    ) -> Result<FullResponse<discard_changes::DiscardChangesResponse>> {
-        if self.validate_capabilities && !self.got_server_capability(Capability::Candidate) {
-            bail!("<discard-changes> operation allowed only for :candidate enabled servers!");
-        };
-        let request = discard_changes::DiscardChangesRequest::new(self.new_message_id());
-        self.dispatch_request(request)
-    }
-
-    pub fn request_cancel_commit(
-        &mut self,
-        persist_id: Option<u32>,
-    ) -> Result<FullResponse<cancel_commit::CancelCommitResponse>> {
-        if self.validate_capabilities && !self.got_server_capability(Capability::ConfirmedCommit) {
-            bail!("<cancel-commit> operation allowed only for :confirmed-commit enabled servers!");
-        };
-        let request = cancel_commit::CancelCommitRequest::new(self.new_message_id(), persist_id);
-        self.dispatch_request(request)
-    }
-
-    // TODO check for :candidate in <get-config>, <edit-config>, <copy-config>, and <validate>
-    // TODO check for :candidate in <lock>, <unlock>
-
-    pub fn request_validate(
-        &mut self,
-        source: validate::ValidateSource,
-    ) -> Result<FullResponse<validate::ValidateResponse>> {
-        // TODO - validate 1.0 vs 1.1 depending on client
-        let request = validate::ValidateRequest::new(self.new_message_id(), source);
-        self.dispatch_request(request)
     }
 }
 

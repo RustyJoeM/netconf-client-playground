@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
+    message_validation::validate_datastore_capability,
+    types::{tag_wrapper::TagWrapper, Capability, Datastore, SimpleResponse},
 };
 
 use super::NetconfRequest;
@@ -23,6 +24,18 @@ impl UnlockRequest {
 
 impl NetconfRequest for UnlockRequest {
     type Response = UnlockResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        validate_datastore_capability(
+            &self.target,
+            &Datastore::Candidate,
+            &Capability::Candidate,
+            server_capabilities,
+        )
+    }
 }
 
 /// Private representation of \<lock\> RPC used for serialization.

@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
+    message_validation::{validate_datastore_capability, validate_url},
+    types::{tag_wrapper::TagWrapper, Capability, Datastore, SimpleResponse},
 };
 
 use super::NetconfRequest;
@@ -29,6 +30,26 @@ impl ValidateRequest {
 
 impl NetconfRequest for ValidateRequest {
     type Response = ValidateResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        match &self.source {
+            ValidateSource::Datastore(datastore) => {
+                validate_datastore_capability(
+                    datastore,
+                    &Datastore::Candidate,
+                    &Capability::Candidate,
+                    server_capabilities,
+                )?;
+            }
+            ValidateSource::Config(_) => {} // TODO - might check for valid/paired XML tags or something?
+            ValidateSource::Url(url) => validate_url(url, server_capabilities)?,
+        };
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize)]

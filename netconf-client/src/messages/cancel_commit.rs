@@ -4,7 +4,8 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, SimpleResponse},
+    message_validation::validate_capability_presence,
+    types::{tag_wrapper::TagWrapper, Capability, SimpleResponse},
 };
 
 use super::NetconfRequest;
@@ -19,6 +20,17 @@ pub struct CancelCommitRequest {
 
 impl NetconfRequest for CancelCommitRequest {
     type Response = CancelCommitResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        validate_capability_presence(
+            &Capability::ConfirmedCommit,
+            server_capabilities,
+            " Cannot perform <cancel-commit> operation.",
+        )
+    }
 }
 
 impl From<CancelCommitRequest> for CancelCommitRequestRpc {

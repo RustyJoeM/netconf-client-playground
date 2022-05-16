@@ -4,7 +4,8 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, EmptyStruct, SimpleResponse},
+    message_validation::validate_capability_presence,
+    types::{tag_wrapper::TagWrapper, Capability, EmptyStruct, SimpleResponse},
 };
 
 use super::{NetconfRequest, ToPrettyXml, ToRawXml};
@@ -13,23 +14,25 @@ use super::{NetconfRequest, ToPrettyXml, ToRawXml};
 pub struct CommitRequest {
     pub message_id: String,
     pub xmlns: String,
-    pub params: Option<ConfirmedCommitParams>,
+    pub commit_type: CommitType,
 }
 
 impl ToRawXml for CommitRequest {
     fn to_raw_xml(&self) -> anyhow::Result<String> {
-        let res = match &self.params {
-            Some(params) => quick_xml::se::to_string(&ConfirmedCommitRequestRpc {
-                message_id: self.message_id.clone(),
-                xmlns: self.xmlns.clone(),
-                commit: ConfirmedCommitRpc {
-                    confirmed: EmptyStruct {},
-                    confirm_timeout: params.confirm_timeout.map(TagWrapper::new),
-                    persist: params.persist.clone().map(TagWrapper::new),
-                    persist_id: params.persist_id.clone().map(TagWrapper::new),
-                },
-            })?,
-            None => quick_xml::se::to_string(&SimpleCommitRequestRpc {
+        let res = match &self.commit_type {
+            CommitType::Confirmed(params) => {
+                quick_xml::se::to_string(&ConfirmedCommitRequestRpc {
+                    message_id: self.message_id.clone(),
+                    xmlns: self.xmlns.clone(),
+                    commit: ConfirmedCommitRpc {
+                        confirmed: EmptyStruct {},
+                        confirm_timeout: params.confirm_timeout.map(TagWrapper::new),
+                        persist: params.persist.clone().map(TagWrapper::new),
+                        persist_id: params.persist_id.clone().map(TagWrapper::new),
+                    },
+                })?
+            }
+            CommitType::Plain => quick_xml::se::to_string(&SimpleCommitRequestRpc {
                 message_id: self.message_id.clone(),
                 xmlns: self.xmlns.clone(),
                 commit: EmptyStruct {},
@@ -44,9 +47,33 @@ impl ToPrettyXml for CommitRequest {}
 
 impl NetconfRequest for CommitRequest {
     type Response = CommitResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        match self.commit_type {
+            CommitType::Plain => validate_capability_presence(
+                &Capability::Candidate,
+                server_capabilities,
+                " Cannot perform <commit> operation.",
+            ),
+            CommitType::Confirmed(_) => validate_capability_presence(
+                &Capability::ConfirmedCommit,
+                server_capabilities,
+                " Cannot perform confirmed <commit> operation.",
+            ),
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum CommitType {
+    Plain,
+    Confirmed(ConfirmedCommitParams),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConfirmedCommitParams {
     pub confirm_timeout: Option<u32>,
     pub persist: Option<String>,
@@ -54,11 +81,11 @@ pub struct ConfirmedCommitParams {
 }
 
 impl CommitRequest {
-    pub fn new(message_id: String, params: Option<ConfirmedCommitParams>) -> Self {
+    pub fn new(message_id: String, commit_type: CommitType) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
-            params,
+            commit_type,
         }
     }
 }

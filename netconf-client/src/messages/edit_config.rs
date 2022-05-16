@@ -6,10 +6,15 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    types::{tag_wrapper::TagWrapper, Datastore, SimpleResponse},
+    message_validation::{
+        validate_capability_presence, validate_datastore_capability, validate_url,
+    },
+    types::{tag_wrapper::TagWrapper, Capability, Datastore, SimpleResponse},
 };
 
 use super::{NetconfRequest, ToPrettyXml, ToRawXml};
+
+// TODO - untested - possibly unfinished/incorrect (de)serialization...
 
 /// TODO - operation for \<edit-config\> elements, but not used due to nested generic XML here...
 pub enum Operation {
@@ -136,6 +141,33 @@ impl ToPrettyXml for EditConfigRequest {}
 
 impl NetconfRequest for EditConfigRequest {
     type Response = EditConfigResponse;
+
+    fn validate_request(&self, server_capabilities: &[crate::types::Capability]) -> Result<()> {
+        validate_datastore_capability(
+            &self.params.target,
+            &Datastore::Candidate,
+            &Capability::Candidate,
+            server_capabilities,
+        )?;
+        if let Some(ErrorOption::RollbackOnError) = &self.params.error_option {
+            validate_capability_presence(
+                &Capability::RollbackOnError,
+                server_capabilities,
+                " Cannot use \"rollback-on-error\" <error-option> parameter.",
+            )?;
+        }
+        if self.params.test_option.is_some() {
+            validate_capability_presence(
+                &Capability::Validate11,
+                server_capabilities,
+                " Cannot use <test-option> parameter.",
+            )?;
+        }
+        if let EditConfigContent::Url(url) = &self.params.config {
+            validate_url(url, server_capabilities)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize)]

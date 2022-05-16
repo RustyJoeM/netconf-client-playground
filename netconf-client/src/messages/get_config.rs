@@ -9,7 +9,8 @@ use serde::Deserialize;
 
 use crate::{
     common::{get_tag_slice, xml_events_to_string, RpcWrapMode, XMLNS},
-    types::{Datastore, FilterPayload, RpcErrorRpc, RpcReply},
+    message_validation::validate_datastore_capability,
+    types::{Capability, Datastore, FilterPayload, RpcErrorRpc, RpcReply},
 };
 
 use super::{FullResponse, NetconfRequest, NetconfResponse, ToPrettyXml, ToRawXml};
@@ -61,6 +62,15 @@ impl ToPrettyXml for GetConfigRequest {}
 
 impl NetconfRequest for GetConfigRequest {
     type Response = GetConfigResponse;
+
+    fn validate_request(&self, server_capabilities: &[crate::types::Capability]) -> Result<()> {
+        validate_datastore_capability(
+            &self.source,
+            &Datastore::Candidate,
+            &Capability::Candidate,
+            server_capabilities,
+        )
+    }
 }
 
 #[derive(Debug)]

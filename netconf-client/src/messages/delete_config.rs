@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
+    message_validation::validate_waypoint_url,
     types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
 };
 
@@ -19,6 +20,14 @@ pub struct DeleteConfigRequest {
 
 impl NetconfRequest for DeleteConfigRequest {
     type Response = DeleteConfigResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        validate_waypoint_url(&self.target, server_capabilities)?;
+        Ok(())
+    }
 }
 
 impl From<DeleteConfigRequest> for DeleteConfigRequestRpc {

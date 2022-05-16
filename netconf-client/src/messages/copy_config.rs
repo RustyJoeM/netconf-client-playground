@@ -4,7 +4,8 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
+    message_validation::{validate_datastore_capability, validate_waypoint_url},
+    types::{Capability, ConfigWaypoint, ConfigWaypointRpc, Datastore, SimpleResponse},
 };
 
 use super::NetconfRequest;
@@ -20,6 +21,28 @@ pub struct CopyConfigRequest {
 
 impl NetconfRequest for CopyConfigRequest {
     type Response = CopyConfigResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        for (check_if_equal_to, needed_capability) in &[
+            (Datastore::Running, Capability::WritableRunning),
+            (Datastore::Candidate, Capability::Candidate),
+        ] {
+            if let ConfigWaypoint::Datastore(datastore) = &self.target {
+                validate_datastore_capability(
+                    datastore,
+                    check_if_equal_to,
+                    needed_capability,
+                    server_capabilities,
+                )?;
+            }
+        }
+        validate_waypoint_url(&self.target, server_capabilities)?;
+        validate_waypoint_url(&self.source, server_capabilities)?;
+        Ok(())
+    }
 }
 
 impl From<CopyConfigRequest> for CopyConfigRequestRpc {

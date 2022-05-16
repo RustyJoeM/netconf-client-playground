@@ -81,6 +81,7 @@ impl Capability {
 }
 
 impl Display for Capability {
+    // TODO - what about schemes for Url capability?
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             Capability::Base => ":base:1.0",

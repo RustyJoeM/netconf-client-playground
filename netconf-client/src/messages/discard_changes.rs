@@ -2,7 +2,11 @@ use std::fmt::Debug;
 
 use serde::Serialize;
 
-use crate::{common::XMLNS, types::SimpleResponse};
+use crate::{
+    common::XMLNS,
+    message_validation::validate_capability_presence,
+    types::{Capability, SimpleResponse},
+};
 
 use super::NetconfRequest;
 
@@ -15,6 +19,13 @@ pub struct DiscardChangesRequest {
 
 impl NetconfRequest for DiscardChangesRequest {
     type Response = DiscardChangesResponse;
+
+    fn validate_request(
+        &self,
+        server_capabilities: &[crate::types::Capability],
+    ) -> anyhow::Result<()> {
+        validate_capability_presence(&Capability::Candidate, server_capabilities, "")
+    }
 }
 
 impl From<DiscardChangesRequest> for DiscardChangesRequestRpc {

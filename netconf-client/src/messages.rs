@@ -16,6 +16,8 @@ pub mod validate;
 use anyhow::Result;
 use std::fmt::Debug;
 
+use crate::types::Capability;
+
 pub trait ToRawXml {
     fn to_raw_xml(&self) -> Result<String>;
 }
@@ -41,6 +43,13 @@ impl<T> ToPrettyXml for T where T: serde::Serialize {}
 
 pub trait NetconfRequest: ToPrettyXml + Debug {
     type Response: NetconfResponse;
+
+    /// Perform a check of request payload against server capabilities.
+    ///
+    /// Returns `Ok(())` on success, or `Err(_)` with problem description otherwise.
+    fn validate_request(&self, _server_capabilities: &[Capability]) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]

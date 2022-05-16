@@ -248,7 +248,11 @@ impl NetconfCommand {
             let request = HelloRequest::new(client_capabilities);
             let _ = self.dump_command_xml(cli_api, request_dump_mode, "Request:", "0");
 
+            // do NOT validate hello request -> no server capabilities yet to validate against!
+            let do_validate_backup = session.validate_capabilities();
+            session.set_validate_capabilities(false);
             let response = session.dispatch_request(request)?;
+            session.set_validate_capabilities(do_validate_backup);
             let _ = dump_response(response_dump_mode, &response);
 
             if response.typed.succeeded() {

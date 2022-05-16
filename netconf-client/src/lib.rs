@@ -7,6 +7,9 @@ mod common;
 /// Common data types and structures used in manipulation with NETCONF requests & responses.
 pub mod types;
 
+/// Helper methods for validating request input parameters against specified server capabilities.
+mod message_validation;
+
 /// All the requests grouped into sub-modules by NETCONF operation.
 /// TODO - should not be used directly for communication,
 /// unless (de)serializing only?
