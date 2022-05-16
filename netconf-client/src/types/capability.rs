@@ -2,9 +2,8 @@ use std::fmt::Display;
 
 use anyhow::bail;
 
-/// Enumeration of NETCONF capabilities defined in RFC6241.
-/// (https://datatracker.ietf.org/doc/html/rfc6241#section-10.4)
-#[derive(Debug, Clone, PartialEq)]
+/// A NETCONF capabilities as defined in RFC 6241 - [section 10.4](https://datatracker.ietf.org/doc/html/rfc6241#section-10.4)
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Capability {
     Base,
     Base11,
@@ -83,7 +82,7 @@ impl Capability {
 
 impl Display for Capability {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = match self {
+        let s = match self {
             Capability::Base => ":base:1.0",
             Capability::Base11 => ":base:1.1",
             Capability::Candidate => ":candidate:1.0",
@@ -97,6 +96,6 @@ impl Display for Capability {
             Capability::XPath => ":xpath:1.0",
             Capability::Other(other) => other,
         };
-        write!(f, "{}", x)
+        write!(f, "{}", s)
     }
 }

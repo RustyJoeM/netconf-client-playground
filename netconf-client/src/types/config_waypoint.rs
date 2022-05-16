@@ -2,17 +2,19 @@ use serde::Serialize;
 
 use super::{tag_wrapper::TagWrapper, Datastore};
 
-/// Artificial unifying enumeration of NETCONF datastore and URL string.
+/// The artificial unifying enumeration of NETCONF datastore and URL.
 ///
-/// Used to identify a source/target of `:url` NETCONF capability enabled operations.
+/// Used to specify a source/target of `:url` NETCONF capability enabled operations.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(into = "ConfigWaypointRpc")]
 pub enum ConfigWaypoint {
+    /// A datastore variant
     Datastore(Datastore),
+    /// URL variant for :url capability enabled client/server.
     Url(String),
 }
 
-/// Private representation of [ConfigWaypoint] used for RPC serialization.
+/// Private representation of [`ConfigWaypoint`] used for RPC serialization.
 #[derive(Debug, Serialize)]
 pub(crate) struct ConfigWaypointRpc {
     datastore: Option<Datastore>,

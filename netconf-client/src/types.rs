@@ -10,7 +10,7 @@ pub use capability::Capability;
 pub use config_waypoint::ConfigWaypoint;
 pub(crate) use config_waypoint::ConfigWaypointRpc;
 pub use datastore::Datastore;
-pub use filter::{Filter, FilterType};
+pub use filter::{Filter, FilterPayload};
 pub(crate) use rpc_error::RpcErrorRpc;
 pub use rpc_error::{ErrorSeverity, ErrorType, RpcError};
 pub use rpc_reply::RpcReply;

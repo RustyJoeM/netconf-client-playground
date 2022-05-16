@@ -18,7 +18,7 @@ use netconf_client::{
         validate::{ValidateRequest, ValidateSource},
         FullResponse, NetconfResponse, ToRawXml,
     },
-    types::{Capability, ConfigWaypoint, Datastore, Filter, FilterType},
+    types::{Capability, ConfigWaypoint, Datastore, Filter, FilterPayload},
     NetconfSession, SshAuthentication,
 };
 use std::net::IpAddr;
@@ -392,14 +392,14 @@ pub enum FilterCommand {
     XPath { value: String },
 }
 
-impl From<&FilterCommand> for Filter {
+impl From<&FilterCommand> for FilterPayload {
     fn from(cmd: &FilterCommand) -> Self {
         let value = match cmd {
-            FilterCommand::Subtree { value } => FilterType::Subtree(value.to_string()),
-            FilterCommand::XPath { value } => FilterType::Xpath(value.to_string()),
+            FilterCommand::Subtree { value } => Filter::Subtree(value.to_string()),
+            FilterCommand::XPath { value } => Filter::Xpath(value.to_string()),
         };
-        Filter {
-            value,
+        FilterPayload {
+            filter: value,
             namespaces: vec![],
         }
     }

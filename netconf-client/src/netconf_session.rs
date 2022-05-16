@@ -7,7 +7,7 @@ use super::messages::*;
 
 use super::messages::edit_config::EditConfigContent;
 use super::ssh_client::SshClient;
-use super::types::{Capability, ConfigWaypoint, Datastore, Filter, RpcReply};
+use super::types::{Capability, ConfigWaypoint, Datastore, FilterPayload, RpcReply};
 use super::SshAuthentication;
 
 use anyhow::{bail, Result};
@@ -177,7 +177,7 @@ impl NetconfSession {
 
     pub fn request_get(
         &mut self,
-        filter: Option<Filter>,
+        filter: Option<FilterPayload>,
     ) -> Result<FullResponse<get::GetResponse>> {
         let request = get::GetRequest::new(self.new_message_id(), filter);
         self.dispatch_request(request)
@@ -186,7 +186,7 @@ impl NetconfSession {
     pub fn request_get_config(
         &mut self,
         source: Datastore,
-        filter: Option<Filter>,
+        filter: Option<FilterPayload>,
     ) -> Result<FullResponse<get_config::GetConfigResponse>> {
         let request = get_config::GetConfigRequest::new(self.new_message_id(), source, filter);
         self.dispatch_request(request)

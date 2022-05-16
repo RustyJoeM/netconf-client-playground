@@ -1,3 +1,7 @@
+// #![deny(missing_docs)]
+// #![warn(missing_docs)]
+// #![deny(missing_doc_code_examples)]
+
 mod common;
 
 /// Common data types and structures used in manipulation with NETCONF requests & responses.

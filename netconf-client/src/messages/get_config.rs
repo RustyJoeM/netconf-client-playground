@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::{
     common::{get_tag_slice, xml_events_to_string, RpcWrapMode, XMLNS},
-    types::{Datastore, Filter, RpcErrorRpc, RpcReply},
+    types::{Datastore, FilterPayload, RpcErrorRpc, RpcReply},
 };
 
 use super::{FullResponse, NetconfRequest, NetconfResponse, ToPrettyXml, ToRawXml};
@@ -19,11 +19,11 @@ pub struct GetConfigRequest {
     pub message_id: String,
     pub xmlns: String,
     pub source: Datastore,
-    pub filter: Option<Filter>,
+    pub filter: Option<FilterPayload>,
 }
 
 impl GetConfigRequest {
-    pub fn new(message_id: String, source: Datastore, filter: Option<Filter>) -> Self {
+    pub fn new(message_id: String, source: Datastore, filter: Option<FilterPayload>) -> Self {
         Self {
             message_id,
             xmlns: XMLNS.to_string(),
