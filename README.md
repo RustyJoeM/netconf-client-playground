@@ -42,3 +42,13 @@ It creates extra file with history of executed commands: `netconf-cli-history.tx
 File can be safely deleted as needed, resulting in loss of the command execution history.
 
 Beware! Please note this file includes all the commands executed from REPL, including any passwords used as parameters for logging into NETCONF API of target devices.
+
+# References
+
+`netconf-client` crate in this playground has been strongly inspired by, and core patterns implemented in similar manner, by:
+- netconf-client - https://github.com/rsitko92/netconf-client/
+
+---
+- RFC 6241 - Network Configuration Protocol (NETCONF) - https://datatracker.ietf.org/doc/html/rfc6241
+---
+- RFC 6242 - Using the NETCONF Protocol over Secure Shell (SSH) - https://datatracker.ietf.org/doc/html/rfc6242
