@@ -9,9 +9,17 @@ use serde::Serialize;
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Datastore {
+    /// Standard "running" datastore of the actual device configuration.
     Running,
+    /// A datastore with pending transaction changes, waiting to be committed/discarded.
+    /// Usage of this datastore is typically conditioned with server side support of `:candidate` capability.
     Candidate,
+    /// Startup configuration loaded by the device when it boots.
+    /// Usage of this datastore is typically conditioned with server side support of `:startup` capability.
     Startup,
+    /// A "fallback" datastore for currently non-standardized or lib-unsupported datastores.
+    ///
+    /// (NOT for URL string - there is standalone type for targets/sources of URL origin - [`crate::types::ConfigWaypoint`])
     Other(String), // TODO - fix unknown datastore ids & problem with extra <other> wrapper in serialization
 }
 

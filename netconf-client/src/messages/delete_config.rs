@@ -1,21 +1,24 @@
 use std::fmt::Debug;
 
+use anyhow::bail;
 use serde::Serialize;
 
 use crate::{
     common::XMLNS,
     message_validation::validate_waypoint_url,
-    types::{ConfigWaypoint, ConfigWaypointRpc, SimpleResponse},
+    types::{ConfigWaypoint, ConfigWaypointRpc, Datastore, SimpleResponse},
 };
 
 use super::NetconfRequest;
 
+/// Representation of NETCONF `<delete-config>` operation request - Delete a configuration datastore.
+/// The <running> configuration datastore cannot be deleted.
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "DeleteConfigRequestRpc")]
 pub struct DeleteConfigRequest {
-    pub message_id: String,
-    pub xmlns: String,
-    pub target: ConfigWaypoint,
+    message_id: String,
+    xmlns: String,
+    target: ConfigWaypoint,
 }
 
 impl NetconfRequest for DeleteConfigRequest {
@@ -25,6 +28,11 @@ impl NetconfRequest for DeleteConfigRequest {
         &self,
         server_capabilities: &[crate::types::Capability],
     ) -> anyhow::Result<()> {
+        if let ConfigWaypoint::Datastore(datastore) = &self.target {
+            if datastore == &Datastore::Running {
+                bail!("Cannot delete \"running\" datastore");
+            }
+        }
         validate_waypoint_url(&self.target, server_capabilities)?;
         Ok(())
     }
@@ -43,6 +51,7 @@ impl From<DeleteConfigRequest> for DeleteConfigRequestRpc {
 }
 
 impl DeleteConfigRequest {
+    /// Creates new instance of NETCONF `<delete-config>` operation request.
     pub fn new(message_id: String, target: ConfigWaypoint) -> Self {
         Self {
             message_id,
@@ -68,4 +77,5 @@ struct DeleteConfigRpc {
     target: ConfigWaypointRpc,
 }
 
+/// Representation of a server response to [`DeleteConfigRequest`].
 pub type DeleteConfigResponse = SimpleResponse;

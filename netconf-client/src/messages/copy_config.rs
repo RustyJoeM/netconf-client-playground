@@ -10,13 +10,15 @@ use crate::{
 
 use super::NetconfRequest;
 
+/// Representation of NETCONF `<copy-config>` operation request.
+/// Create or replace an entire configuration datastore with the contents of another complete configuration datastore.
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "CopyConfigRequestRpc")]
 pub struct CopyConfigRequest {
-    pub message_id: String,
-    pub xmlns: String,
-    pub target: ConfigWaypoint,
-    pub source: ConfigWaypoint,
+    message_id: String,
+    xmlns: String,
+    target: ConfigWaypoint,
+    source: ConfigWaypoint,
 }
 
 impl NetconfRequest for CopyConfigRequest {
@@ -59,6 +61,7 @@ impl From<CopyConfigRequest> for CopyConfigRequestRpc {
 }
 
 impl CopyConfigRequest {
+    /// Creates new instance of NETCONF `<copy-config>` operation request.
     pub fn new(message_id: String, target: ConfigWaypoint, source: ConfigWaypoint) -> Self {
         Self {
             message_id,
@@ -86,4 +89,5 @@ struct CopyConfigRpc {
     source: ConfigWaypointRpc,
 }
 
+/// Representation of a server response to [`CopyConfigRequest`].
 pub type CopyConfigResponse = SimpleResponse;

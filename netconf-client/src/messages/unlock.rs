@@ -8,7 +8,7 @@ use crate::{
 
 use super::NetconfRequest;
 
-/// The \<unlock\> request for releasing the short-lived restriction of datastore access.
+/// Representation of NETCONF `<unlock>` operation request - for releasing the short-lived restriction of datastore access.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "UnlockRequestRpc")]
 pub struct UnlockRequest {
@@ -17,6 +17,7 @@ pub struct UnlockRequest {
 }
 
 impl UnlockRequest {
+    /// Creates new instance of NETCONF `<unlock>` operation request.
     pub fn new(message_id: String, target: Datastore) -> Self {
         Self { message_id, target }
     }
@@ -38,7 +39,7 @@ impl NetconfRequest for UnlockRequest {
     }
 }
 
-/// Private representation of \<lock\> RPC used for serialization.
+/// Private representation of `<lock>` RPC used for serialization.
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
 struct UnlockRequestRpc {
@@ -65,4 +66,5 @@ impl From<UnlockRequest> for UnlockRequestRpc {
     }
 }
 
+/// Representation of a server response to [`UnlockRequest`].
 pub type UnlockResponse = SimpleResponse;

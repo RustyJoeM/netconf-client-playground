@@ -5,18 +5,29 @@ use anyhow::bail;
 /// A NETCONF capabilities as defined in RFC 6241 - [section 10.4](https://datatracker.ietf.org/doc/html/rfc6241#section-10.4)
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Capability {
+    /// `:base-1.0` capability for NETCONF 1.0 plain message exchange
     Base,
+    /// `:base-1.1` capability for NETCONF 1.1 chunked framing message exchange
     Base11,
-    Candidate,
-    ConfirmedCommit,
-    RollbackOnError,
-    Startup,
-    Url(Vec<String>),
-    Validate,
-    Validate11,
+    /// `:writable-running` capability - [RFC 6241 - section 8.2](https://datatracker.ietf.org/doc/html/rfc6241#section-8.2)
     WritableRunning,
+    /// `:candidate` capability - [RFC 6241 - section 8.3](https://datatracker.ietf.org/doc/html/rfc6241#section-8.3)
+    Candidate,
+    /// `:confirmed-commit` capability - [RFC 6241 - section 8.4](https://datatracker.ietf.org/doc/html/rfc6241#section-8.4)
+    ConfirmedCommit,
+    /// `:rollback-on-error` capability - [RFC 6241 - section 8.5](https://datatracker.ietf.org/doc/html/rfc6241#section-8.5)
+    RollbackOnError,
+    /// `:validate` capability - [RFC 6241 - section 8.6](https://datatracker.ietf.org/doc/html/rfc6241#section-8.6)
+    Validate,
+    /// `:startup` capability - [RFC 6241 - section 8.7](https://datatracker.ietf.org/doc/html/rfc6241#section-8.7)
+    Startup,
+    /// `:url` capability - [RFC 6241 - section 8.8](https://datatracker.ietf.org/doc/html/rfc6241#section-8.8)
+    Url(Vec<String>),
+    /// `:xpath` capability - [RFC 6241 - section 8.9](https://datatracker.ietf.org/doc/html/rfc6241#section-8.9)
     XPath,
-    // for other non standardized ones...
+    /// `:validate-1.1` capability for extended <validate> functionality
+    Validate11,
+    /// Fallback non-standardized or un-implemented capability with full URN as argument.
     Other(String),
 }
 

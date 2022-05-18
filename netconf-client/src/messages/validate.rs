@@ -8,13 +8,18 @@ use crate::{
 
 use super::NetconfRequest;
 
+/// Source of the configuration to be validated by [`ValidateRequest`].
 #[derive(Debug, Clone)]
 pub enum ValidateSource {
+    /// Plain whole datastore (e.g. "candidate").
     Datastore(Datastore),
+    /// Explicit configuration dump in XML format.
     Config(String),
+    /// URL string for :url capability enabled client/server.
     Url(String),
 }
 
+/// Representation of NETCONF `<validate>` operation request.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "ValidateRequestRpc")]
 pub struct ValidateRequest {
@@ -23,6 +28,7 @@ pub struct ValidateRequest {
 }
 
 impl ValidateRequest {
+    /// Creates new instance of NETCONF `<validate>` operation.
     pub fn new(message_id: String, source: ValidateSource) -> Self {
         Self { message_id, source }
     }
@@ -102,4 +108,5 @@ impl From<ValidateRequest> for ValidateRequestRpc {
     }
 }
 
+/// Representation of a server response to [`ValidateRequest`].
 pub type ValidateResponse = SimpleResponse;

@@ -8,7 +8,7 @@ use crate::{
 
 use super::NetconfRequest;
 
-/// The \<lock\> request for short-lived restriction of datastore access.
+/// Representation of NETCONF `<lock>` operation request - for short-lived restriction of datastore access.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "LockRequestRpc")]
 pub struct LockRequest {
@@ -17,6 +17,7 @@ pub struct LockRequest {
 }
 
 impl LockRequest {
+    /// Creates new instance of NETCONF `<lock>` operation request.
     pub fn new(message_id: String, target: Datastore) -> Self {
         Self { message_id, target }
     }
@@ -38,7 +39,7 @@ impl NetconfRequest for LockRequest {
     }
 }
 
-/// Private representation of \<lock\> RPC used for serialization.
+/// Private representation of `<lock>` RPC used for serialization.
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
 struct LockRequestRpc {
@@ -65,4 +66,5 @@ impl From<LockRequest> for LockRequestRpc {
     }
 }
 
+/// Representation of a server response to [`LockRequest`].
 pub type LockResponse = SimpleResponse;

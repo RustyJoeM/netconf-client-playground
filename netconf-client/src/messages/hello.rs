@@ -7,7 +7,7 @@ use crate::{
 
 use super::NetconfRequest;
 
-/// Client \<hello\> request to be sent to NETCONF server when initiating the connection.
+/// Client `<hello>` request to be sent to NETCONF server when initiating the connection.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "HelloRequestRpc")]
 pub struct HelloRequest {
@@ -16,7 +16,7 @@ pub struct HelloRequest {
 }
 
 impl HelloRequest {
-    /// Create instance of \<hello\> request.
+    /// Create instance of `<hello>` request.
     /// Pass vector of supported client capabilities as an input.
     pub fn new(capabilities: Vec<Capability>) -> Self {
         Self { capabilities }
@@ -27,7 +27,7 @@ impl NetconfRequest for HelloRequest {
     type Response = HelloResponse;
 }
 
-/// Private representation for serialization of \<hello\> request.
+/// Private representation for serialization of `<hello>` request.
 #[derive(Debug, Serialize)]
 #[serde(rename = "hello")]
 struct HelloRequestRpc {
@@ -60,7 +60,7 @@ impl From<HelloRequest> for HelloRequestRpc {
 
 // TODO - error case?
 
-/// Initial \<hello\> response sent by NETCONF server.
+/// Initial `<hello>` response sent by NETCONF server.
 #[derive(Debug, Deserialize)]
 #[serde(from = "HelloResponseRpc")]
 pub struct HelloResponse {
@@ -69,7 +69,7 @@ pub struct HelloResponse {
     pub capabilities: Vec<Capability>,
 }
 
-/// Private representation for de-serialization of \<hello\> request.
+/// Private representation for de-serialization of `<hello>` request.
 #[derive(Debug, Deserialize)]
 struct HelloResponseRpc {
     #[serde(rename = "xmlns")]

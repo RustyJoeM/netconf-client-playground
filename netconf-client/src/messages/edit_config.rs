@@ -16,7 +16,8 @@ use super::{NetconfRequest, ToPrettyXml, ToRawXml};
 
 // TODO - untested - possibly unfinished/incorrect (de)serialization...
 
-/// TODO - operation for \<edit-config\> elements, but not used due to nested generic XML here...
+/// TODO - operation for `<edit-config>` elements, but not used due to nested generic XML here...
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Operation {
     Merge,
     Replace,
@@ -25,21 +26,39 @@ pub enum Operation {
     Remove,
 }
 
-#[derive(Debug, Serialize, Clone)]
+/// Possible values of the `default-operation` parameter.
+#[derive(Debug, Serialize, Copy, Clone, PartialEq)]
 pub enum DefaultOperation {
+    /// The configuration data in the <config> parameter is
+    /// merged with the configuration at the corresponding level in
+    /// the target datastore. This is the default behavior.
     Merge,
+    /// The configuration data in the <config> parameter
+    /// completely replaces the configuration in the target
+    /// datastore. This is useful for loading previously saved
+    /// configuration data.
     Replace,
+    /// The target datastore is unaffected by the configuration
+    /// in the <config> parameter, unless and until the incoming
+    /// configuration data uses the "operation" attribute to request
+    /// a different operation. If the configuration in the <config>
+    /// parameter contains data for which there is not a
+    /// corresponding level in the target datastore, an <rpc-error>
+    /// is returned with an <error-tag> value of data-missing.
+    /// Using "none" allows operations like "delete" to avoid
+    /// unintentionally creating the parent hierarchy of the element
+    /// to be deleted.
     None,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Copy, Clone, PartialEq)]
 pub enum TestOption {
     TestThenSet,
     Set,
     TestOnly,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Copy, Clone, PartialEq)]
 #[allow(clippy::enum_variant_names)]
 pub enum ErrorOption {
     StopOnError,
@@ -47,21 +66,28 @@ pub enum ErrorOption {
     RollbackOnError,
 }
 
+/// Representation of NETCONF `<edit-config>` operation request -
 #[derive(Debug, Clone)]
 pub struct EditConfigRequest {
-    pub message_id: String,
-    pub xmlns: String,
-    pub params: EditConfigParams,
+    message_id: String,
+    xmlns: String,
+    params: EditConfigParams,
 }
 
+/// Payload of the configuration to be edited.
 #[derive(Debug, Clone)]
 pub enum EditConfigContent {
+    /// Raw XML dump of the configuration changes.
     Config(String),
+    /// URL of the changes to be performed for `:url` capability enabled servers.
     Url(String),
 }
 
+/// Input parameters of the `<edit-config>` operation request.
+/// See [RFC 6421 - section 7.2](https://datatracker.ietf.org/doc/html/rfc6241#section-7.2)
 #[derive(Debug, Clone)]
 pub struct EditConfigParams {
+    /// Name of the configuration datastore being edited.
     pub target: Datastore,
     pub default_operation: Option<DefaultOperation>,
     pub test_option: Option<TestOption>,
@@ -101,6 +127,7 @@ impl From<EditConfigParams> for EditConfigRpc {
 }
 
 impl EditConfigRequest {
+    /// Creates new instance of NETCONF `<edit-config>` operation request.
     pub fn new(message_id: String, params: EditConfigParams) -> Self {
         Self {
             message_id,
@@ -200,4 +227,5 @@ struct ConfigRpc {
     item: String,
 }
 
+/// Representation of a server response to [`EditConfigRequest`].
 pub type EditConfigResponse = SimpleResponse;

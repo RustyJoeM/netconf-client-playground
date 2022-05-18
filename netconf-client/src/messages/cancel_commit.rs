@@ -10,12 +10,13 @@ use crate::{
 
 use super::NetconfRequest;
 
+/// Representation of NETCONF `<cancel-commit>` operation request - used to cancel an ongoing confirmed commit.
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "CancelCommitRequestRpc")]
 pub struct CancelCommitRequest {
-    pub message_id: String,
-    pub xmlns: String,
-    pub persist_id: Option<u32>,
+    message_id: String,
+    xmlns: String,
+    persist_id: Option<u32>,
 }
 
 impl NetconfRequest for CancelCommitRequest {
@@ -46,6 +47,7 @@ impl From<CancelCommitRequest> for CancelCommitRequestRpc {
 }
 
 impl CancelCommitRequest {
+    /// Creates new instance of NETCONF `<cancel-commit>` operation request.
     pub fn new(message_id: String, persist_id: Option<u32>) -> Self {
         Self {
             message_id,
@@ -70,4 +72,5 @@ struct CancelCommitRequestRpc {
     cancel_commit: CancelCommitRpc,
 }
 
+/// Representation of a server response to [`CancelCommitRequest`].
 pub type CancelCommitResponse = SimpleResponse;

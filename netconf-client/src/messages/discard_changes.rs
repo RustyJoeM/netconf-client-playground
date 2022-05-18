@@ -10,11 +10,13 @@ use crate::{
 
 use super::NetconfRequest;
 
+/// Representation of NETCONF `<discard-changes>` operation request -
+/// to revert the candidate configuration to the current running configuration.
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "DiscardChangesRequestRpc")]
 pub struct DiscardChangesRequest {
-    pub message_id: String,
-    pub xmlns: String,
+    message_id: String,
+    xmlns: String,
 }
 
 impl NetconfRequest for DiscardChangesRequest {
@@ -39,6 +41,7 @@ impl From<DiscardChangesRequest> for DiscardChangesRequestRpc {
 }
 
 impl DiscardChangesRequest {
+    /// Creates new instance of NETCONF `<discard-changes>` operation request.
     pub fn new(message_id: String) -> Self {
         Self {
             message_id,
@@ -60,4 +63,5 @@ struct DiscardChangesRequestRpc {
     discard_changes: DiscardChangesRpc,
 }
 
+/// Representation of a server response to [`DiscardChangesRequest`].
 pub type DiscardChangesResponse = SimpleResponse;

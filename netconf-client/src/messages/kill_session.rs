@@ -7,12 +7,14 @@ use crate::{
 
 use super::NetconfRequest;
 
+/// Representation of NETCONF `<kill-session>` operation request.
+/// Force the termination of a NETCONF session.
 #[derive(Debug, Serialize, Clone)]
 #[serde(into = "KillSessionRequestRpc")]
 pub struct KillSessionRequest {
-    pub message_id: String,
-    pub xmlns: String,
-    pub session_id: u32,
+    message_id: String,
+    xmlns: String,
+    session_id: u32,
 }
 
 impl NetconfRequest for KillSessionRequest {
@@ -20,6 +22,7 @@ impl NetconfRequest for KillSessionRequest {
 }
 
 impl KillSessionRequest {
+    /// Create new instance of `<kill-session>` request.
     pub fn new(message_id: String, session_id: u32) -> Self {
         Self {
             message_id,
@@ -56,4 +59,5 @@ impl From<KillSessionRequest> for KillSessionRequestRpc {
     }
 }
 
+/// Representation of a server response to [`KillSessionRequest`].
 pub type KillSessionResponse = SimpleResponse;

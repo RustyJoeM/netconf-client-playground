@@ -8,13 +8,16 @@ use crate::{
 
 /// Simple response type used by several NETCONF operations,
 /// when NETCONF server returns either:
-///  - \<ok/\> tag on success
-///  - \<rpc-error\> on failure
+///  - `<ok/>` tag on success
+///  - `<rpc-error>` on failure
 #[derive(Debug, Deserialize)]
 #[serde(try_from = "SimpleResponseRpc")]
 pub struct SimpleResponse {
+    /// A `<message-id>`, corresponding to the request that this response comes for.
     pub message_id: String,
+    /// An XML namespace of the RPC message.
     pub xmlns: String,
+    /// Actual response payload returned by server.
     pub reply: RpcReply,
 }
 

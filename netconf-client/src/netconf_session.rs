@@ -55,7 +55,7 @@ impl NetconfSession {
 
     /// Set whether to perform server capabilities check before dispatching the actual RPCs to server.
     ///
-    /// Upon initial \<hello\> exchange when session is created, capabilities advertised by NETCONF server are stored internally.
+    /// Upon initial `<hello>` exchange when session is created, capabilities advertised by NETCONF server are stored internally.
     /// All subsequent checks are executed "offline" against this capability set.
     ///
     /// This setting is `true` by default.
@@ -78,7 +78,7 @@ impl NetconfSession {
     }
 
     /// All-in-one constructor that connects to the target NETCONF server,
-    /// and exchanges the \<hello\> messages and capabilities information.
+    /// and exchanges the `<hello>` messages and capabilities information.
     pub fn initialize(
         address: IpAddr,
         port: u16,

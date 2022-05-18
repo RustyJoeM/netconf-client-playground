@@ -4,19 +4,19 @@ use crate::{common::XMLNS, types::SimpleResponse};
 
 use super::NetconfRequest;
 
-/// Request for \<close-session\> operation.
+/// Representation of NETCONF `<close-session>` operation request - for graceful termination of a NETCONF session.
 #[derive(Debug, Clone, Serialize)]
 #[serde(into = "CloseSessionRequestRpc")]
 pub struct CloseSessionRequest {
-    pub message_id: String,
-    pub xmlns: String,
+    message_id: String,
+    xmlns: String,
 }
 
 impl NetconfRequest for CloseSessionRequest {
     type Response = CloseSessionResponse;
 }
 
-/// Private RPC representation of \<close-session\> request.
+/// Private RPC representation of `<close-session>` request.
 #[derive(Debug, Serialize)]
 #[serde(rename = "rpc")]
 struct CloseSessionRequestRpc {
@@ -31,6 +31,7 @@ struct CloseSessionRequestRpc {
 struct CloseSession {}
 
 impl CloseSessionRequest {
+    /// Creates new instance of `<close-session>` operation request..
     pub fn new(message_id: String) -> Self {
         Self {
             message_id,
@@ -49,4 +50,5 @@ impl From<CloseSessionRequest> for CloseSessionRequestRpc {
     }
 }
 
+/// Representation of a server response to [`CloseSessionRequest`].
 pub type CloseSessionResponse = SimpleResponse;
