@@ -12,6 +12,7 @@ use std::{
 
 use super::messages::NetconfRequest;
 
+/// Type of a `:base` capability defining the type of SSH communication between the endpoints.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum BaseCapability {
     /// NETCONF 1.0 raw message processing.
@@ -56,6 +57,13 @@ pub struct SshClient {
     auth: SshAuthentication,
     channel: Option<Channel>,
     base_capability: BaseCapability,
+}
+
+macro_rules! regex {
+    ($re:literal $(,)?) => {{
+        static RE: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
+        RE.get_or_init(|| regex::Regex::new($re).unwrap())
+    }};
 }
 
 impl SshClient {
@@ -152,8 +160,9 @@ impl SshClient {
         }
 
         let mut result = String::new();
+        let mut buffer = [0u8; 4096];
+
         loop {
-            let mut buffer = [1u8; 4096];
             let bytes_read = self.read(&mut buffer)?;
             let s = String::from_utf8_lossy(&buffer[..bytes_read]);
 
@@ -162,7 +171,8 @@ impl SshClient {
                     result.push_str(&s);
                 }
                 BaseCapability::Base11 => {
-                    let slice = if let Some((index, _)) = s.match_indices('\n').nth(1) {
+                    let chunk_prefix: &regex::Regex = regex!(r"^\n#\d+\n");
+                    let slice = if let Some(index) = chunk_prefix.shortest_match(&s) {
                         &s[index..]
                     } else {
                         &s
