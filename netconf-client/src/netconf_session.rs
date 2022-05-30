@@ -41,14 +41,21 @@ impl NetconfSession {
         }
     }
 
+    /// String representation of the target NETCONF server, in the form of "host:port".
     pub fn target_string(&self) -> String {
         self.ssh.target_string()
     }
 
+    /// Current `session-id` as advertised by NETCONF server.
+    /// Returns `None` if no session is opened.
     pub fn session_id(&self) -> Option<u32> {
         self.session_id
     }
 
+    /// Flag indicating [`NetconfSession`] behavior, and whether requests are validated against server capabilities before actual dispatch.
+    ///
+    /// - `false` - requests are sent to server irrespective of the advertised server capabilities
+    /// - `true` - validates input parameters of requests against advertised server capabilities; returns errors for dispatch requests in case of missing/unsupported functionality
     pub fn validate_capabilities(&self) -> bool {
         self.validate_capabilities
     }
@@ -63,12 +70,22 @@ impl NetconfSession {
         self.validate_capabilities = do_validate;
     }
 
-    /// Establish connection to target server.
+    /// Establish SSH connection to target server.
     pub fn connect(&mut self) -> Result<()> {
         if self.session_id.is_some() {
             bail!("Already connected to server!");
         }
-        self.ssh.connect()
+        self.ssh.connect()?;
+        Ok(())
+    }
+
+    /// Perform exchange of `<hello>` messages & capabilities advertisement.
+    /// Requires previously established SSH connection done using [NetconfSession::connect()] method.
+    pub fn exchange_hello(&mut self) -> Result<FullResponse<HelloResponse>> {
+        let request = hello::HelloRequest::new(self.client_capabilities.clone());
+        let response = self.dispatch_request(request)?;
+        self.update_on_hello(&response.typed)?;
+        Ok(response)
     }
 
     /// Increase internal message-id counter and return its String representation.
@@ -77,8 +94,8 @@ impl NetconfSession {
         self.last_message_id.to_string()
     }
 
-    /// All-in-one constructor that connects to the target NETCONF server,
-    /// and exchanges the `<hello>` messages and capabilities information.
+    /// All-in-one constructor that connects to the target NETCONF server at the moment of creation,
+    /// and performs the <hello> capability exchange.
     pub fn initialize(
         address: IpAddr,
         port: u16,
@@ -87,14 +104,17 @@ impl NetconfSession {
     ) -> Result<Self> {
         let mut instance = Self::new(address, port, auth, client_capabilities);
         instance.connect()?;
-        instance.request_hello()?;
+        instance.exchange_hello()?;
         Ok(instance)
     }
 
+    /// List of capabilities advertised by NETCONF server on `<hello>` messages exchange.
+    /// Returns `None` if no connection established yet.
     pub fn server_capabilities(&self) -> Option<&[Capability]> {
         self.server_capabilities.as_deref()
     }
 
+    /// A `:base` capability that specifies type of message exchange between client & server.
     pub fn base_capability(&self) -> BaseCapability {
         self.ssh.base_capability()
     }
@@ -110,14 +130,13 @@ impl NetconfSession {
                 None => bail!("No server capabilities! Session not initiated yet?"),
             };
         }
-        let dump = self.ssh.dispatch_netconf_request(&request)?;
+        let dump = self.ssh.dispatch_netconf_request(request)?;
         let typed = R::Response::from_netconf_rpc(&dump)?;
         Ok(FullResponse { typed, dump })
     }
 
-    // TODO - address automated connection process not to enforce user to invoke multiple of fns in sequence...
     /// Update internal state of [`NetconfSession`] according to the hello capabilities exchange results.
-    pub fn update_on_hello(&mut self, response: &HelloResponse) -> Result<()> {
+    fn update_on_hello(&mut self, response: &HelloResponse) -> Result<()> {
         // RFC quote:
         // If no protocol version capability in common is found, the NETCONF peer MUST NOT continue the
         // session. If more than one protocol version URI in common is present, then the highest numbered
@@ -136,18 +155,6 @@ impl NetconfSession {
         Ok(())
     }
 
-    /// Send <hello> request to target server. Client capabilities sent are the ones used at the creation of NETCONF server.
-    /// These cannot be changed during session runtime.
-    /// Server capabilities are stored in the [`Self`] instance after successful invocation.
-    pub fn request_hello(&mut self) -> Result<FullResponse<hello::HelloResponse>> {
-        let request = hello::HelloRequest::new(self.client_capabilities.clone());
-        let response = self.dispatch_request(request)?;
-
-        self.update_on_hello(&response.typed)?;
-
-        Ok(response)
-    }
-
     pub fn request_close_session(
         &mut self,
     ) -> Result<FullResponse<close_session::CloseSessionResponse>> {
@@ -162,6 +169,8 @@ impl NetconfSession {
     }
 }
 
+/// Compares two sets of capabilities, and finds the highest version of `:base` capability to specify
+/// type of SSH communication to be used for further requests, as defined in [RFC 6242](https://datatracker.ietf.org/doc/html/rfc6242).
 fn common_highest_base_capability(
     client_capabilities: &[Capability],
     server_capabilities: &[Capability],

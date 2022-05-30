@@ -5,8 +5,8 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    message_validation::validate_waypoint_url,
-    types::{ConfigWaypoint, ConfigWaypointRpc, Datastore, SimpleResponse},
+    message_validation::{validate_datastore_capability, validate_url},
+    types::{Capability, ConfigWaypoint, ConfigWaypointRpc, Datastore, SimpleResponse},
 };
 
 use super::NetconfRequest;
@@ -28,12 +28,22 @@ impl NetconfRequest for DeleteConfigRequest {
         &self,
         server_capabilities: &[crate::types::Capability],
     ) -> anyhow::Result<()> {
-        if let ConfigWaypoint::Datastore(datastore) = &self.target {
-            if datastore == &Datastore::Running {
-                bail!("Cannot delete \"running\" datastore");
+        match &self.target {
+            ConfigWaypoint::Datastore(datastore) => {
+                if datastore == &Datastore::Running {
+                    bail!("Cannot delete \"running\" datastore");
+                }
+                validate_datastore_capability(
+                    datastore,
+                    &Datastore::Candidate,
+                    &Capability::Candidate,
+                    server_capabilities,
+                )?;
             }
-        }
-        validate_waypoint_url(&self.target, server_capabilities)?;
+            ConfigWaypoint::Url(url) => {
+                validate_url(url, server_capabilities)?;
+            }
+        };
         Ok(())
     }
 }

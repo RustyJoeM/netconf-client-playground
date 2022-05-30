@@ -137,7 +137,7 @@ impl SshClient {
 
     /// Dispatches the input data over connected SSH stream.
     /// Returns the String containing whole reponse received from server up to & excluding the NETCONF message separator.
-    pub fn dispatch_netconf_request(&mut self, request: &impl NetconfRequest) -> Result<String> {
+    pub fn dispatch_netconf_request(&mut self, request: impl NetconfRequest) -> Result<String> {
         if self.channel.is_some() {
             // TODO - max length check?
             let raw_dump = request.to_raw_xml()?;

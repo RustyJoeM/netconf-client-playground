@@ -10,3 +10,5 @@
 
 - introduce fluent templates (or other localization crate/tools) to allow for multi-lang CLI?
   - might run into problems/need of restructuring comments/clap annotations for commands... though might be nice feature
+
+- more fine-tuned configuration for request/response dumps - e.g. have log file for request/response dumps?

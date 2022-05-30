@@ -240,23 +240,23 @@ impl NetconfCommand {
             let client_capabilities: Vec<Capability> =
                 cli_api.config().client_capabilities().to_vec();
 
-            let mut session =
-                NetconfSession::new(*address, *port, auth, client_capabilities.clone());
-            session.connect()?;
-            println!("SSH connected to target NETCONF server.");
+            let mut session = NetconfSession::new(*address, *port, auth, client_capabilities);
 
-            let request = HelloRequest::new(client_capabilities);
             let _ = self.dump_command_xml(cli_api, request_dump_mode, "Request:", "0");
 
             // do NOT validate hello request -> no server capabilities yet to validate against!
             let do_validate_backup = session.validate_capabilities();
             session.set_validate_capabilities(false);
-            let response = session.dispatch_request(request)?;
-            session.set_validate_capabilities(do_validate_backup);
+
+            session.connect()?;
+            println!("SSH connected to target NETCONF server.");
+
+            let response = session.exchange_hello()?;
             let _ = dump_response(response_dump_mode, &response);
 
+            session.set_validate_capabilities(do_validate_backup);
+
             if response.typed.succeeded() {
-                session.update_on_hello(&response.typed)?;
                 println!(
                     "Hello capability exchange successful, base capability: {}",
                     format!("{}", session.base_capability()).cyan()
@@ -391,7 +391,7 @@ fn args_to_config_waypoint(
 pub enum FilterCommand {
     /// Specify items with [subtree](https://datatracker.ietf.org/doc/html/rfc6241#section-6) filtering.
     Subtree { value: String },
-    /// Filter using [xpath(https://datatracker.ietf.org/doc/html/rfc6241#section-8.9) expression.
+    /// Filter using [xpath](https://datatracker.ietf.org/doc/html/rfc6241#section-8.9) expression.
     #[clap(name = "xpath")]
     XPath { value: String },
 }

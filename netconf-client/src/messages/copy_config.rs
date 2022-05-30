@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::{
     common::XMLNS,
-    message_validation::{validate_datastore_capability, validate_waypoint_url},
+    message_validation::{validate_datastore_capability, validate_url},
     types::{Capability, ConfigWaypoint, ConfigWaypointRpc, Datastore, SimpleResponse},
 };
 
@@ -28,21 +28,40 @@ impl NetconfRequest for CopyConfigRequest {
         &self,
         server_capabilities: &[crate::types::Capability],
     ) -> anyhow::Result<()> {
-        for (check_if_equal_to, needed_capability) in &[
-            (Datastore::Running, Capability::WritableRunning),
-            (Datastore::Candidate, Capability::Candidate),
-        ] {
-            if let ConfigWaypoint::Datastore(datastore) = &self.target {
+        match &self.target {
+            ConfigWaypoint::Datastore(datastore) => {
                 validate_datastore_capability(
                     datastore,
-                    check_if_equal_to,
-                    needed_capability,
+                    &Datastore::Running,
+                    &Capability::WritableRunning,
+                    server_capabilities,
+                )?;
+                validate_datastore_capability(
+                    datastore,
+                    &Datastore::Candidate,
+                    &Capability::Candidate,
                     server_capabilities,
                 )?;
             }
-        }
-        validate_waypoint_url(&self.target, server_capabilities)?;
-        validate_waypoint_url(&self.source, server_capabilities)?;
+            ConfigWaypoint::Url(url) => {
+                validate_url(url, server_capabilities)?;
+            }
+        };
+
+        match &self.source {
+            ConfigWaypoint::Datastore(datastore) => {
+                validate_datastore_capability(
+                    datastore,
+                    &Datastore::Candidate,
+                    &Capability::Candidate,
+                    server_capabilities,
+                )?;
+            }
+            ConfigWaypoint::Url(url) => {
+                validate_url(url, server_capabilities)?;
+            }
+        };
+
         Ok(())
     }
 }
