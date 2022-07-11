@@ -1,11 +1,23 @@
 use crate::types::{Capability, Datastore};
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use url::Url;
 
 /// Check whether `server_capabilities` include URL capability with the same scheme value,
 /// as the input `url` parameter.
 pub fn validate_url(url: &str, server_capabilities: &[Capability]) -> Result<()> {
-    for cap in server_capabilities.iter() {
+    let wp_url = Url::parse(url)?;
+
+    server_capabilities
+        .iter()
+        .filter_map(|c| match c {
+            Capability::Url(schemes) => Some(schemes),
+            _ => None,
+        })
+        .find(|schemes| schemes.iter().any(|x| x == wp_url.scheme()))
+        .map(|_| ())
+        .ok_or_else(|| anyhow!("Missing capability \":url\""))
+
+    /* for cap in server_capabilities.iter() {
         if let Capability::Url(schemes) = cap {
             let wp_url = Url::parse(url)?;
             if schemes.iter().any(|x| x == wp_url.scheme()) {
@@ -18,8 +30,8 @@ pub fn validate_url(url: &str, server_capabilities: &[Capability]) -> Result<()>
                 );
             }
         }
-    }
-    bail!("Missing capability \":url\"");
+    } */
+    /* bail!("Missing capability \":url\""); */
 }
 
 /// Validate that if and only if the specified `datastore` is equal to `trigger`,

@@ -39,13 +39,20 @@ impl TryFrom<SimpleResponseRpc> for SimpleResponse {
     fn try_from(value: SimpleResponseRpc) -> Result<Self> {
         let message_id = value.message_id;
         let xmlns = value.xmlns;
-        let reply = match value.ok.is_some() {
+
+        let reply = match (value.ok, value.rpc_error) {
+            (Some(_), None) => RpcReply::Ok,
+            (None, Some(err)) => RpcReply::Error(err),
+            _ => bail!("Missing both <ok/> and <rpc-error> from response"),
+        };
+
+        /* let reply = match value.ok.is_some() {
             true => RpcReply::Ok,
             false => match value.rpc_error {
                 Some(err) => RpcReply::Error(err),
                 None => bail!("Missing both <ok/> and <rpc-error> from response"),
             },
-        };
+        }; */
         Ok(SimpleResponse {
             message_id,
             xmlns,

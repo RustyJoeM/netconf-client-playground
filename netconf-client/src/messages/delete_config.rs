@@ -31,7 +31,7 @@ impl NetconfRequest for DeleteConfigRequest {
         match &self.target {
             ConfigWaypoint::Datastore(datastore) => {
                 if datastore == &Datastore::Running {
-                    bail!("Cannot delete \"running\" datastore");
+                    bail!(r#"Cannot delete "running" datastore"#);
                 }
                 validate_datastore_capability(
                     datastore,
